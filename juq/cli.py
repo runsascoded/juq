@@ -40,17 +40,27 @@ def with_nb(func):
     return wrapper
 
 
-# @cli.command()
+CELL_TYPE_ABBREVS = {
+    'c': 'code',
+    'm': 'markdown',
+    'md': 'markdown',
+    'r': 'raw',
+}
+
+
 @cli.command()
-@click.option('-m/-M', '--metadata/--no-metadata', is_flag=True)
-@click.option('-o/-O', '--outputs/--no-outputs', default=None)
-@click.option('-s/-S', '--source/--no-source', default=None)
-@click.option('-t', '--cell-type')
+@click.option('-m/-M', '--metadata/--no-metadata', default=None, help='Explicitly include or exclude each cell\'s "metadata" key. If only `-m` is passed, only the "metadata" value of each cell is printed')
+@click.option('-o/-O', '--outputs/--no-outputs', default=None, help='Explicitly include or exclude each cell\'s "outputs" key. If only `-o` is passed, only the "outputs" value of each cell is printed')
+@click.option('-s/-S', '--source/--no-source', default=None, help='Explicitly include or exclude each cell\'s "source" key. If only `-s` is passed, the source is printed directly (not as JSON)')
+@click.option('-t', '--cell-type', help='Only print cells of this type. Recognizes abbreviations: "c" for "code", {"m","md"} for "markdown", "r" for "raw"')
 @click.argument('cells_slice')
 @with_nb
 def cells(cell_type, cells_slice, nb, **flags):
+    """Slice/Filter cells."""
     cells = nb['cells']
     if cell_type:
+        if cell_type in CELL_TYPE_ABBREVS:
+            cell_type = CELL_TYPE_ABBREVS[cell_type]
         cells = [
             cell
             for cell in cells
@@ -133,10 +143,11 @@ def merge_cell_outputs(cell):
 
 
 @cli.command('merge-outputs')
-@click.option('-i', '--in-place', is_flag=True)
-@click.option('-o', '--out-path')
+@click.option('-i', '--in-place', is_flag=True, help='Modify [NB_PATH] in-place')
+@click.option('-o', '--out-path', help='Write to this file instead of stdout')
 @with_nb
 def merge_outputs(nb, nb_path, in_place, out_path):
+    """Merge consecutive "stream" outputs (e.g. stderr)."""
     if in_place:
         if out_path:
             raise ValueError("Cannot use `-i` with `-o`")
