@@ -57,6 +57,12 @@ Useful for situations like:
 - [jupyter-book#973](https://github.com/executablebooks/jupyter-book/issues/973)
 - [nbval#138](https://github.com/computationalmodelling/nbval/issues/138#issuecomment-1869177219)
 
+As of [nbconvert#2089](https://github.com/jupyter/nbconvert/pull/2089), this should be redundant with:
+
+```bash
+jupyter nbconvert --coalesce-streams --inplace notebook.ipynb
+```
+
 ### `juq papermill-clean`
 ```bash
 juq papermill-clean --help
