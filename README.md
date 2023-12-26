@@ -3,7 +3,7 @@ CLI for viewing/slicing Jupyter notebooks (name is inspired by "`jq` for Jupyter
 
 ## Installation
 ```bash
-pip install juq
+pip install juq.py
 ```
 
 ## Usage
