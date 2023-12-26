@@ -17,7 +17,7 @@ def identity(obj):
     yield obj
 
 
-def with_nb(func):
+def with_nb_input(func):
     spec = getfullargspec(func)
 
     @wraps(func)
@@ -27,14 +27,43 @@ def with_nb(func):
         with ctx as f:
             # nb = nbformat.read(f, as_version=4)
             nb = json.load(f)
-        # ctx = identity(stdin) if nb_path == '-' else open(nb_path, 'r')
-        # with ctx as f:
-        #     nb = nbformat.read(f, as_version=4)
-        if 'nb_path' in spec.args:
+        if 'nb_path' in spec.args or 'nb_path' in spec.kwonlyargs:
             kwargs['nb_path'] = nb_path
         func(*args, nb=nb, **kwargs)
-        # with ctx as f:
-        #     nbformat.write(nb, f)
+    return wrapper
+
+
+def with_nb(func):
+    spec = getfullargspec(func)
+
+    @wraps(func)
+    @click.option('-i', '--in-place', is_flag=True, help='Modify [NB_PATH] in-place')
+    @click.option('-o', '--out-path', help='Write to this file instead of stdout')
+    @with_nb_input
+    def wrapper(*args, nb_path, **kwargs):
+        """Merge consecutive "stream" outputs (e.g. stderr)."""
+        nb = kwargs['nb']
+        in_place = kwargs.get('in_place')
+        out_path = kwargs.get('out_path')
+        if in_place:
+            if out_path:
+                raise ValueError("Cannot use `-i` with `-o`")
+            if not nb_path or nb_path == '-':
+                raise ValueError("Cannot use `-i` without explicit `nb_path`")
+            out_path = nb_path
+
+        kwargs['nb_path'] = nb_path
+        kwargs = {
+            k: v
+            for k, v in kwargs.items()
+            if k in spec.args
+        }
+        nb = func(*args, **kwargs)
+
+        out_ctx = identity(stdout) if out_path == '-' or out_path is None else open(out_path, 'w')
+        with out_ctx as f:
+            json.dump(nb, f, indent=2)
+
     return wrapper
 
 
@@ -52,7 +81,7 @@ CELL_TYPE_ABBREVS = {
 @click.option('-s/-S', '--source/--no-source', default=None, help='Explicitly include or exclude each cell\'s "source" key. If only `-s` is passed, the source is printed directly (not as JSON)')
 @click.option('-t', '--cell-type', help='Only print cells of this type. Recognizes abbreviations: "c" for "code", {"m","md"} for "markdown", "r" for "raw"')
 @click.argument('cells_slice')
-@with_nb
+@with_nb_input
 def cells(cell_type, cells_slice, nb, **flags):
     """Slice/Filter cells."""
     cells = nb['cells']
@@ -141,25 +170,42 @@ def merge_cell_outputs(cell):
 
 
 @cli.command('merge-outputs')
-@click.option('-i', '--in-place', is_flag=True, help='Modify [NB_PATH] in-place')
-@click.option('-o', '--out-path', help='Write to this file instead of stdout')
 @with_nb
-def merge_outputs(nb, nb_path, in_place, out_path):
+def merge_outputs(nb):
     """Merge consecutive "stream" outputs (e.g. stderr)."""
-    if in_place:
-        if out_path:
-            raise ValueError("Cannot use `-i` with `-o`")
-        if not nb_path or nb_path == '-':
-            raise ValueError("Cannot use `-i` without explicit `nb_path`")
-        out_path = nb_path
     nb['cells'] = [
         merge_cell_outputs(cell)
         for cell in nb['cells']
     ]
+    return nb
 
-    ctx = identity(stdout) if out_path == '-' or out_path is None else open(out_path, 'w')
-    with ctx as f:
-        json.dump(nb, f, indent=2)
+
+def papermill_clean_cell(cell):
+    if 'id' in cell:
+        del cell['id']
+    if 'metadata' in cell:
+        metadata = cell['metadata']
+        for k in [ 'papermill', 'execution', 'widgets' ]:
+            if k in metadata:
+                del metadata[k]
+    return cell
+
+
+@cli.command('papermill-clean')
+@with_nb
+def papermill_clean(nb):
+    """Remove Papermill metadata from a notebook.
+
+    Removes `.metadata.papermill` and `.cells[*].metadata.{papermill,execution,widgets}`.
+    """
+    nb['cells'] = [
+        papermill_clean_cell(cell)
+        for cell in nb['cells']
+    ]
+    metadata = nb['metadata']
+    if 'papermill' in metadata:
+        del metadata['papermill']
+    return nb
 
 
 if __name__ == '__main__':

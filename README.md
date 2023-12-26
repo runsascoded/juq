@@ -54,3 +54,19 @@ juq merge-outputs -i notebook.ipynb
 Useful for situations like:
 - [jupyter-book#973](https://github.com/executablebooks/jupyter-book/issues/973)
 - [nbval#138](https://github.com/computationalmodelling/nbval/issues/138#issuecomment-1869177219)
+
+### `juq papermill-clean`
+```bash
+juq papermill-clean --help
+# Usage: juq papermill-clean [OPTIONS] [NB_PATH]
+#
+#   Remove Papermill metadata from a notebook.
+#
+#   Removes `.metadata.papermill` and
+#   `.cells[*].metadata.{papermill,execution,widgets}`.
+#
+# Options:
+#   -i, --in-place       Modify [NB_PATH] in-place
+#   -o, --out-path TEXT  Write to this file instead of stdout
+#   --help               Show this message and exit.
+```

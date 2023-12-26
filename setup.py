@@ -5,6 +5,9 @@ setup(
     version='0.0.1',
     packages=find_packages(),
     install_requires=open('requirements.txt').read(),
+    extras_require={
+        'test': open('requirements-test.txt').read(),
+    },
     license="MIT",
     author="Ryan Williams",
     author_email="ryan@runsascoded.com",

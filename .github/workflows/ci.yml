@@ -1,8 +1,28 @@
-name: Release
+name: Test / Release
 on:
   push:
+    branches: [ "main" ]
     tags: [ "v**" ]
+  pull_request:
+    branches: [ "**" ]
+  workflow_dispatch:
+env:
+  python-version: 3.11.6
 jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: ${{ env.python-version }}
+      - name: Install juq
+        run: pip install -e .[test]
+      - name: Setup test
+        run: python -m ipykernel install --user --name python3
+      - name: Run tests
+        run: pytest -v
   release:
     name: Release
     if: startsWith(github.ref, 'refs/tags/')
@@ -11,7 +31,7 @@ jobs:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
         with:
-          python-version: 3.11
+          python-version: ${{ env.python-version }}
       - name: Install release deps
         run: pip install setuptools twine wheel
       - name: Install juq
