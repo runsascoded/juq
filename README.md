@@ -3,8 +3,6 @@ CLI for viewing/slicing Jupyter notebooks (name is inspired by "`jq` for Jupyter
 
 [![PyPI version](https://badge.fury.io/py/juq.py.svg)](https://badge.fury.io/py/juq.py)
 
-[TOC]
-
 ## Installation
 ```bash
 pip install juq.py
