@@ -1,12 +1,10 @@
 import json
 from contextlib import contextmanager
-from fileinput import FileInput
 from functools import wraps
 from inspect import getfullargspec
 from sys import stdin, stdout, stderr
 
 import click
-import nbformat
 
 
 @click.group()
