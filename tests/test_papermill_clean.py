@@ -3,7 +3,7 @@ from os import path
 from os.path import dirname
 from tempfile import TemporaryDirectory
 from papermill import execute_notebook
-from juq.cli import papermill_clean
+from juq.cli import papermill_clean_cmd
 
 TEST_DIR = path.join(dirname(__file__), "files", "merge-outputs")
 
@@ -19,7 +19,7 @@ def test_papermill_clean():
         assert 'papermill' in post_papermill['metadata']
 
         cleaned_path = path.join(tmpdir, 'cleaned.ipynb')
-        papermill_clean.callback(nb_path=post_papermill_path, out_path=cleaned_path)
+        papermill_clean_cmd.callback(nb_path=post_papermill_path, out_path=cleaned_path)
         with open(cleaned_path, 'r') as f:
             cleaned_nb = json.load(f)
         split_outputs_nb_path = path.join(TEST_DIR, "split-outputs.ipynb")

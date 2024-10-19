@@ -1,35 +1,48 @@
 import json
-from contextlib import contextmanager
+from contextlib import nullcontext
 from functools import wraps
 from inspect import getfullargspec
+from subprocess import check_output
 from sys import stdin, stdout, stderr
 
-import click
+from click import argument, group, option
 
 
-@click.group()
+@group()
 def cli():
     pass
-
-
-@contextmanager
-def identity(obj):
-    yield obj
 
 
 def with_nb_input(func):
     spec = getfullargspec(func)
 
     @wraps(func)
-    @click.argument('nb_path', required=False)
+    @argument('nb_path', required=False)
     def wrapper(nb_path, *args, **kwargs):
-        ctx = identity(stdin) if nb_path == '-' or nb_path is None else open(nb_path, 'r')
+        ctx = nullcontext(stdin) if nb_path == '-' or nb_path is None else open(nb_path, 'r')
         with ctx as f:
-            # nb = nbformat.read(f, as_version=4)
-            nb = json.load(f)
+            nb_str = f.read()
+            indent = kwargs.pop('indent', None)
+            if indent is None:
+                if nb_str.startswith('{'):
+                    if nb_str[1] == "\n":
+                        idx = 2
+                        indent = 0
+                        while nb_str[idx] == ' ':
+                            idx += 1
+                            indent += 1
+                    else:
+                        indent = None
+                else:
+                    raise ValueError(f"Cannot infer `indent` from non-JSON input beginning with {nb_str[:30]}")
+
+            trailing_newline = kwargs.pop('trailing_newline', None)
+            if trailing_newline is None:
+                trailing_newline = nb_str.endswith('\n')
+            nb = json.loads(nb_str)
         if 'nb_path' in spec.args or 'nb_path' in spec.kwonlyargs:
             kwargs['nb_path'] = nb_path
-        func(*args, nb=nb, **kwargs)
+        return func(*args, nb=nb, indent=indent, trailing_newline=trailing_newline, **kwargs)
     return wrapper
 
 
@@ -37,12 +50,13 @@ def with_nb(func):
     spec = getfullargspec(func)
 
     @wraps(func)
-    @click.option('-i', '--in-place', is_flag=True, help='Modify [NB_PATH] in-place')
-    @click.option('-o', '--out-path', help='Write to this file instead of stdout')
+    @option('-i', '--in-place', is_flag=True, help='Modify [NB_PATH] in-place')
+    @option('-n', '--indent', type=int, help='Indentation level for the output notebook JSON (default: infer from input)')
+    @option('-o', '--out-path', help='Write to this file instead of stdout')
+    @option('-t/-T', '--trailing-newline/--no-trailing-newline', default=None, help='Enforce presence or absence of a trailing newline (default: match input)')
     @with_nb_input
-    def wrapper(*args, nb_path, **kwargs):
+    def wrapper(*args, nb_path, indent, trailing_newline, **kwargs):
         """Merge consecutive "stream" outputs (e.g. stderr)."""
-        nb = kwargs['nb']
         in_place = kwargs.get('in_place')
         out_path = kwargs.get('out_path')
         if in_place:
@@ -60,9 +74,11 @@ def with_nb(func):
         }
         nb = func(*args, **kwargs)
 
-        out_ctx = identity(stdout) if out_path == '-' or out_path is None else open(out_path, 'w')
+        out_ctx = nullcontext(stdout) if out_path == '-' or out_path is None else open(out_path, 'w')
         with out_ctx as f:
-            json.dump(nb, f, indent=2)
+            json.dump(nb, f, indent=indent)
+            if trailing_newline:
+                f.write('\n')
 
     return wrapper
 
@@ -76,11 +92,11 @@ CELL_TYPE_ABBREVS = {
 
 
 @cli.command()
-@click.option('-m/-M', '--metadata/--no-metadata', default=None, help='Explicitly include or exclude each cell\'s "metadata" key. If only `-m` is passed, only the "metadata" value of each cell is printed')
-@click.option('-o/-O', '--outputs/--no-outputs', default=None, help='Explicitly include or exclude each cell\'s "outputs" key. If only `-o` is passed, only the "outputs" value of each cell is printed')
-@click.option('-s/-S', '--source/--no-source', default=None, help='Explicitly include or exclude each cell\'s "source" key. If only `-s` is passed, the source is printed directly (not as JSON)')
-@click.option('-t', '--cell-type', help='Only print cells of this type. Recognizes abbreviations: "c" for "code", {"m","md"} for "markdown", "r" for "raw"')
-@click.argument('cells_slice')
+@option('-m/-M', '--metadata/--no-metadata', default=None, help='Explicitly include or exclude each cell\'s "metadata" key. If only `-m` is passed, only the "metadata" value of each cell is printed')
+@option('-o/-O', '--outputs/--no-outputs', default=None, help='Explicitly include or exclude each cell\'s "outputs" key. If only `-o` is passed, only the "outputs" value of each cell is printed')
+@option('-s/-S', '--source/--no-source', default=None, help='Explicitly include or exclude each cell\'s "source" key. If only `-s` is passed, the source is printed directly (not as JSON)')
+@option('-t', '--cell-type', help='Only print cells of this type. Recognizes abbreviations: "c" for "code", {"m","md"} for "markdown", "r" for "raw"')
+@argument('cells_slice')
 @with_nb_input
 def cells(cell_type, cells_slice, nb, **flags):
     """Slice/Filter cells."""
@@ -169,8 +185,6 @@ def merge_cell_outputs(cell):
     return cell
 
 
-@cli.command('merge-outputs')
-@with_nb
 def merge_outputs(nb):
     """Merge consecutive "stream" outputs (e.g. stderr)."""
     nb['cells'] = [
@@ -178,6 +192,15 @@ def merge_outputs(nb):
         for cell in nb['cells']
     ]
     return nb
+
+
+merge_outputs_cmd = cli.command('merge-outputs')(with_nb(merge_outputs))
+
+
+@cli.group
+def papermill():
+    """Wrapper for Papermill commands (`clean`, `run`)."""
+    pass
 
 
 def papermill_clean_cell(cell):
@@ -191,8 +214,6 @@ def papermill_clean_cell(cell):
     return cell
 
 
-@cli.command('papermill-clean')
-@with_nb
 def papermill_clean(nb):
     """Remove Papermill metadata from a notebook.
 
@@ -205,6 +226,20 @@ def papermill_clean(nb):
     metadata = nb['metadata']
     if 'papermill' in metadata:
         del metadata['papermill']
+    return nb
+
+
+papermill_clean_cmd = papermill.command('clean')(with_nb(papermill_clean))
+
+
+@papermill.command('run')
+@with_nb
+def papermill_run(nb):
+    """Run a notebook using Papermill, clean nondeterministic metadata, normalize output streams."""
+    output = check_output(['papermill'], input=json.dumps(nb).encode())
+    nb = json.loads(output)
+    nb = papermill_clean(nb)
+    nb = merge_outputs(nb)
     return nb
 
 

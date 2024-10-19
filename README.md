@@ -1,16 +1,25 @@
 # `juq`
-CLI for viewing/slicing Jupyter notebooks (name is inspired by "`jq` for Jupyter")
+Query, run, and clean Jupyter notebooks (name is inspired by "`jq` for Jupyter")
 
 [![PyPI version](https://badge.fury.io/py/juq.py.svg)](https://badge.fury.io/py/juq.py)
 
-## Installation
+<!-- toc -->
+- [Installation](#installation)
+- [Usage](#usage)
+    - [`juq cells`](#juq-cells)
+    - [`juq merge-outputs`](#juq-merge-outputs)
+    - [`juq papermill clean`](#juq-papermill-clean)
+    - [`juq papermill run`](#juq-papermill-run)
+<!-- /toc -->
+
+## Installation <a id="installation"></a>
 ```bash
 pip install juq.py
 ```
 
-## Usage
+## Usage <a id="usage"></a>
 
-### `juq cells`
+### `juq cells` <a id="juq-cells"></a>
 Slice/Filter cells:
 ```bash
 juq cells --help
@@ -36,8 +45,10 @@ juq cells --help
 #   --help                          Show this message and exit.
 ```
 
-### `juq merge-outputs`
+### `juq merge-outputs` <a id="juq-merge-outputs"></a>
 Merge consecutive "stream" outputs (e.g. stderr):
+
+<!-- `bmdf -- juq merge-outputs --help` -->
 ```bash
 juq merge-outputs --help
 # Usage: juq merge-outputs [OPTIONS] [NB_PATH]
@@ -45,14 +56,20 @@ juq merge-outputs --help
 #   Merge consecutive "stream" outputs (e.g. stderr).
 #
 # Options:
-#   -i, --in-place       Modify [NB_PATH] in-place
-#   -o, --out-path TEXT  Write to this file instead of stdout
-#   --help               Show this message and exit.
+#   -i, --in-place                  Modify [NB_PATH] in-place
+#   -n, --indent INTEGER            Indentation level for the output notebook
+#                                   JSON (default: infer from input)
+#   -o, --out-path TEXT             Write to this file instead of stdout
+#   -t, --trailing-newline / -T, --no-trailing-newline
+#                                   Enforce presence or absence of a trailing
+#                                   newline (default: match input)
+#   --help                          Show this message and exit.
 ```
 e.g.:
 ```bash
 juq merge-outputs -i notebook.ipynb
 ```
+
 Useful for situations like:
 - [jupyter-book#973](https://github.com/executablebooks/jupyter-book/issues/973)
 - [nbval#138](https://github.com/computationalmodelling/nbval/issues/138#issuecomment-1869177219)
@@ -63,10 +80,11 @@ As of [nbconvert#2089](https://github.com/jupyter/nbconvert/pull/2089), this sho
 jupyter nbconvert --coalesce-streams --inplace notebook.ipynb
 ```
 
-### `juq papermill-clean`
+### `juq papermill clean` <a id="juq-papermill-clean"></a>
+<!-- `bmdf -- juq papermill clean --help` -->
 ```bash
-juq papermill-clean --help
-# Usage: juq papermill-clean [OPTIONS] [NB_PATH]
+juq papermill clean --help
+# Usage: juq papermill clean [OPTIONS] [NB_PATH]
 #
 #   Remove Papermill metadata from a notebook.
 #
@@ -74,7 +92,31 @@ juq papermill-clean --help
 #   `.cells[*].metadata.{papermill,execution,widgets}`.
 #
 # Options:
-#   -i, --in-place       Modify [NB_PATH] in-place
-#   -o, --out-path TEXT  Write to this file instead of stdout
-#   --help               Show this message and exit.
+#   -i, --in-place                  Modify [NB_PATH] in-place
+#   -n, --indent INTEGER            Indentation level for the output notebook
+#                                   JSON (default: infer from input)
+#   -o, --out-path TEXT             Write to this file instead of stdout
+#   -t, --trailing-newline / -T, --no-trailing-newline
+#                                   Enforce presence or absence of a trailing
+#                                   newline (default: match input)
+#   --help                          Show this message and exit.
+```
+
+### `juq papermill run` <a id="juq-papermill-run"></a>
+<!-- `bmdf -- juq papermill run --help` -->
+```bash
+juq papermill run --help
+# Usage: juq papermill run [OPTIONS] [NB_PATH]
+#
+#   Run a notebook using Papermill, clean nondeterministic metadata.
+#
+# Options:
+#   -i, --in-place                  Modify [NB_PATH] in-place
+#   -n, --indent INTEGER            Indentation level for the output notebook
+#                                   JSON (default: infer from input)
+#   -o, --out-path TEXT             Write to this file instead of stdout
+#   -t, --trailing-newline / -T, --no-trailing-newline
+#                                   Enforce presence or absence of a trailing
+#                                   newline (default: match input)
+#   --help                          Show this message and exit.
 ```
