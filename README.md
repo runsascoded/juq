@@ -1,7 +1,8 @@
 # `juq`
 Query, run, and clean Jupyter notebooks (name is inspired by "`jq` for Jupyter")
 
-[![PyPI version](https://badge.fury.io/py/juq.py.svg)](https://badge.fury.io/py/juq.py)
+[![juq.py on PyPI](https://img.shields.io/pypi/v/juq.py?label=juq.py)][juq.py]
+
 
 <!-- toc -->
 - [Installation](#installation)
@@ -108,9 +109,12 @@ juq papermill clean --help
 juq papermill run --help
 # Usage: juq papermill run [OPTIONS] [NB_PATH]
 #
-#   Run a notebook using Papermill, clean nondeterministic metadata.
+#   Run a notebook using Papermill, clean nondeterministic metadata, normalize
+#   output streams.
 #
 # Options:
+#   -p, --parameter TEXT            "<k>=<v>" variable to set, while executing
+#                                   the notebook
 #   -i, --in-place                  Modify [NB_PATH] in-place
 #   -n, --indent INTEGER            Indentation level for the output notebook
 #                                   JSON (default: infer from input)
@@ -120,3 +124,5 @@ juq papermill run --help
 #                                   newline (default: match input)
 #   --help                          Show this message and exit.
 ```
+
+[juq.py]: https://pypi.org/project/juq.py/
