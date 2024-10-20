@@ -233,10 +233,17 @@ papermill_clean_cmd = papermill.command('clean')(with_nb(papermill_clean))
 
 
 @papermill.command('run')
+@option('-p', '--parameter', 'parameter_strs', multiple=True, help='"<k>=<v>" variable to set, while executing the notebook')
 @with_nb
-def papermill_run(nb):
+def papermill_run(nb, parameter_strs):
     """Run a notebook using Papermill, clean nondeterministic metadata, normalize output streams."""
-    output = check_output(['papermill'], input=json.dumps(nb).encode())
+    param_args = []
+    for param_str in parameter_strs:
+        pcs = param_str.split('=', 1)
+        if len(pcs) != 2:
+            raise ValueError(f"Unrecognized parameter string: {param_str}")
+        param_args.extend(['-p', pcs[0], pcs[1]])
+    output = check_output(['papermill', *param_args], input=json.dumps(nb).encode())
     nb = json.loads(output)
     nb = papermill_clean(nb)
     nb = merge_outputs(nb)
