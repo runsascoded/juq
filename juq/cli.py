@@ -213,6 +213,8 @@ def papermill_clean_cell(cell, keep_ids: bool = False):
         for k in [ 'papermill', 'execution', 'widgets' ]:
             if k in metadata:
                 del metadata[k]
+        if 'tags' in metadata and not metadata['tags']:
+            del metadata['tags']
     return cell
 
 
