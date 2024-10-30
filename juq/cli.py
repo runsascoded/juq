@@ -51,6 +51,7 @@ def with_nb(func):
 
     @wraps(func)
     @option('-i', '--in-place', is_flag=True, help='Modify [NB_PATH] in-place')
+    @option('-I', '--keep-ids', is_flag=True, help='Keep cell ids')
     @option('-n', '--indent', type=int, help='Indentation level for the output notebook JSON (default: infer from input)')
     @option('-o', '--out-path', help='Write to this file instead of stdout')
     @option('-t/-T', '--trailing-newline/--no-trailing-newline', default=None, help='Enforce presence or absence of a trailing newline (default: match input)')
@@ -203,8 +204,8 @@ def papermill():
     pass
 
 
-def papermill_clean_cell(cell):
-    if 'id' in cell:
+def papermill_clean_cell(cell, keep_ids: bool = False):
+    if not keep_ids and 'id' in cell:
         del cell['id']
     if 'metadata' in cell:
         metadata = cell['metadata']
@@ -214,13 +215,13 @@ def papermill_clean_cell(cell):
     return cell
 
 
-def papermill_clean(nb):
+def papermill_clean(nb, keep_ids: bool = False):
     """Remove Papermill metadata from a notebook.
 
     Removes `.metadata.papermill` and `.cells[*].metadata.{papermill,execution,widgets}`.
     """
     nb['cells'] = [
-        papermill_clean_cell(cell)
+        papermill_clean_cell(cell, keep_ids=keep_ids)
         for cell in nb['cells']
     ]
     metadata = nb['metadata']
@@ -235,7 +236,7 @@ papermill_clean_cmd = papermill.command('clean')(with_nb(papermill_clean))
 @papermill.command('run')
 @option('-p', '--parameter', 'parameter_strs', multiple=True, help='"<k>=<v>" variable to set, while executing the notebook')
 @with_nb
-def papermill_run(nb, parameter_strs):
+def papermill_run(nb, keep_ids, parameter_strs):
     """Run a notebook using Papermill, clean nondeterministic metadata, normalize output streams."""
     param_args = []
     for param_str in parameter_strs:
@@ -245,7 +246,7 @@ def papermill_run(nb, parameter_strs):
         param_args.extend(['-p', pcs[0], pcs[1]])
     output = check_output(['papermill', *param_args], input=json.dumps(nb).encode())
     nb = json.loads(output)
-    nb = papermill_clean(nb)
+    nb = papermill_clean(nb, keep_ids=keep_ids)
     nb = merge_outputs(nb)
     return nb
 

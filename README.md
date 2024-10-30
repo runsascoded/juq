@@ -58,6 +58,7 @@ juq merge-outputs --help
 #
 # Options:
 #   -i, --in-place                  Modify [NB_PATH] in-place
+#   -I, --keep-ids                  Keep cell ids
 #   -n, --indent INTEGER            Indentation level for the output notebook
 #                                   JSON (default: infer from input)
 #   -o, --out-path TEXT             Write to this file instead of stdout
@@ -94,6 +95,7 @@ juq papermill clean --help
 #
 # Options:
 #   -i, --in-place                  Modify [NB_PATH] in-place
+#   -I, --keep-ids                  Keep cell ids
 #   -n, --indent INTEGER            Indentation level for the output notebook
 #                                   JSON (default: infer from input)
 #   -o, --out-path TEXT             Write to this file instead of stdout
@@ -116,6 +118,7 @@ juq papermill run --help
 #   -p, --parameter TEXT            "<k>=<v>" variable to set, while executing
 #                                   the notebook
 #   -i, --in-place                  Modify [NB_PATH] in-place
+#   -I, --keep-ids                  Keep cell ids
 #   -n, --indent INTEGER            Indentation level for the output notebook
 #                                   JSON (default: infer from input)
 #   -o, --out-path TEXT             Write to this file instead of stdout
