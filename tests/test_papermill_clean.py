@@ -2,7 +2,9 @@ import json
 from os import path
 from os.path import dirname
 from tempfile import TemporaryDirectory
+
 from papermill import execute_notebook
+
 from juq.cli import papermill_clean_cmd
 
 TEST_DIR = path.join(dirname(__file__), "files", "merge-outputs")
