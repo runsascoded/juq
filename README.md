@@ -57,6 +57,8 @@ juq merge-outputs --help
 #   Merge consecutive "stream" outputs (e.g. stderr).
 #
 # Options:
+#   -a, --ensure-ascii              Octal-escape non-ASCII characters in JSON
+#                                   output
 #   -i, --in-place                  Modify [NB_PATH] in-place
 #   -I, --keep-ids                  Keep cell ids
 #   -n, --indent INTEGER            Indentation level for the output notebook
@@ -94,6 +96,8 @@ juq papermill clean --help
 #   `.cells[*].metadata.{papermill,execution,widgets}`.
 #
 # Options:
+#   -a, --ensure-ascii              Octal-escape non-ASCII characters in JSON
+#                                   output
 #   -i, --in-place                  Modify [NB_PATH] in-place
 #   -I, --keep-ids                  Keep cell ids
 #   -n, --indent INTEGER            Indentation level for the output notebook
@@ -117,6 +121,8 @@ juq papermill run --help
 # Options:
 #   -p, --parameter TEXT            "<k>=<v>" variable to set, while executing
 #                                   the notebook
+#   -a, --ensure-ascii              Octal-escape non-ASCII characters in JSON
+#                                   output
 #   -i, --in-place                  Modify [NB_PATH] in-place
 #   -I, --keep-ids                  Keep cell ids
 #   -n, --indent INTEGER            Indentation level for the output notebook

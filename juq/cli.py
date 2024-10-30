@@ -50,13 +50,14 @@ def with_nb(func):
     spec = getfullargspec(func)
 
     @wraps(func)
+    @option('-a', '--ensure-ascii', is_flag=True, help='Octal-escape non-ASCII characters in JSON output')
     @option('-i', '--in-place', is_flag=True, help='Modify [NB_PATH] in-place')
     @option('-I', '--keep-ids', is_flag=True, help='Keep cell ids')
     @option('-n', '--indent', type=int, help='Indentation level for the output notebook JSON (default: infer from input)')
     @option('-o', '--out-path', help='Write to this file instead of stdout')
     @option('-t/-T', '--trailing-newline/--no-trailing-newline', default=None, help='Enforce presence or absence of a trailing newline (default: match input)')
     @with_nb_input
-    def wrapper(*args, nb_path, indent, trailing_newline, **kwargs):
+    def wrapper(*args, nb_path, ensure_ascii=False, indent=None, trailing_newline=None, **kwargs):
         """Merge consecutive "stream" outputs (e.g. stderr)."""
         in_place = kwargs.get('in_place')
         out_path = kwargs.get('out_path')
@@ -77,7 +78,7 @@ def with_nb(func):
 
         out_ctx = nullcontext(stdout) if out_path == '-' or out_path is None else open(out_path, 'w')
         with out_ctx as f:
-            json.dump(nb, f, indent=indent)
+            json.dump(nb, f, indent=indent, ensure_ascii=ensure_ascii)
             if trailing_newline:
                 f.write('\n')
 
