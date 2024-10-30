@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='juq.py',
-    version='0.2.1',
+    version='0.2.2',
     packages=find_packages(),
     install_requires=open('requirements.txt').read(),
     extras_require={
