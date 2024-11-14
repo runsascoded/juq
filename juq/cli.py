@@ -2,7 +2,7 @@ import json
 from contextlib import nullcontext
 from functools import wraps
 from inspect import getfullargspec
-from subprocess import check_output
+from subprocess import Popen, PIPE
 from sys import stdin, stdout, stderr
 
 from click import argument, group, option
@@ -236,6 +236,46 @@ def papermill_clean(nb, keep_ids: bool = False):
 papermill_clean_cmd = papermill.command('clean')(with_nb(papermill_clean))
 
 
+def run_nb(command, nb):
+    """
+    Run a command with stdin input and capture stdout/stderr, regardless of exit status.
+
+    Args:
+        command (list): Command and arguments as a list
+        nb (dict): Data to be JSON-encoded and passed to stdin
+
+    Returns:
+        tuple: (stdout_data, stderr_data, return_code)
+    """
+    # Open process with pipes for stdin, stdout, and stderr
+    proc = Popen(
+        command,
+        stdin=PIPE,
+        stdout=PIPE,
+        stderr=PIPE,
+        text=False  # Binary mode for consistent encoding handling
+    )
+
+    # Send input and get output, waiting for process to complete
+    try:
+        stdout, stderr = proc.communicate(
+            input=json.dumps(nb).encode('utf-8'),
+            timeout=None  # No timeout, wait indefinitely
+        )
+
+        # Try to decode the output as JSON, but handle cases where it's not JSON
+        try:
+            nb = json.loads(stdout.decode('utf-8')) if stdout else None
+        except json.JSONDecodeError:
+            nb = stdout.decode('utf-8')
+
+        return nb, proc.returncode
+
+    except Exception as e:
+        proc.kill()  # Ensure process is terminated if something goes wrong
+        raise RuntimeError(f"Failed to run command: {e}")
+
+
 @papermill.command('run')
 @option('-p', '--parameter', 'parameter_strs', multiple=True, help='"<k>=<v>" variable to set, while executing the notebook')
 @with_nb
@@ -247,8 +287,9 @@ def papermill_run(nb, keep_ids, parameter_strs):
         if len(pcs) != 2:
             raise ValueError(f"Unrecognized parameter string: {param_str}")
         param_args.extend(['-p', pcs[0], pcs[1]])
-    output = check_output(['papermill', *param_args], input=json.dumps(nb).encode())
-    nb = json.loads(output)
+    nb, returncode = run_nb(['papermill', *param_args], nb)
+    if not nb:
+        raise RuntimeError(f"No nb returned from Papermill; exit code {returncode}")
     nb = papermill_clean(nb, keep_ids=keep_ids)
     nb = merge_outputs(nb)
     return nb
