@@ -4,12 +4,14 @@ import json
 from contextlib import nullcontext
 from functools import wraps
 from inspect import getfullargspec
-from subprocess import Popen, PIPE
+from os.path import join
 from sys import stdin, stdout, stderr
+from tempfile import TemporaryDirectory
 from typing import Tuple
 
 from click import argument, group, option, UsageError
-from utz import decos
+from papermill.cli import _resolve_type
+from utz import decos, recvs
 
 
 @group()
@@ -58,22 +60,22 @@ def with_nb_input(func):
             if trailing_newline is None:
                 trailing_newline = nb_str.endswith('\n')
             nb = json.loads(nb_str)
-        if 'nb_path' in spec.args or 'nb_path' in spec.kwonlyargs:
+        if recvs(func, 'nb'):
+            kwargs['nb'] = nb
+        if recvs(func, 'nb_path') or 'nb_path' in spec.kwonlyargs:
             kwargs['nb_path'] = nb_path
-        return func(nb=nb, indent=indent, trailing_newline=trailing_newline, **kwargs)
+        return func(indent=indent, trailing_newline=trailing_newline, **kwargs)
     return wrapper
 
 
 def with_nb(func):
-    spec = getfullargspec(func)
-
-    @wraps(func)
     @option('-a', '--ensure-ascii', is_flag=True, help='Octal-escape non-ASCII characters in JSON output')
     @option('-i', '--in-place', is_flag=True, help='Modify [NB_PATH] in-place')
     @option('-n', '--indent', type=int, help='Indentation level for the output notebook JSON (default: infer from input)')
     @option('-o', '--out-path', help='Write to this file instead of stdout')
     @option('-t/-T', '--trailing-newline/--no-trailing-newline', default=None, help='Enforce presence or absence of a trailing newline (default: match input)')
     @with_nb_input
+    @wraps(func)
     def wrapper(nb_path, *args, ensure_ascii=False, indent=None, trailing_newline=None, **kwargs):
         """Merge consecutive "stream" outputs (e.g. stderr)."""
         in_place = kwargs.get('in_place')
@@ -89,15 +91,25 @@ def with_nb(func):
         kwargs = {
             k: v
             for k, v in kwargs.items()
-            if k in spec.args
+            if recvs(func, k)
         }
-        nb = func(*args, **kwargs)
+        rv = func(*args, **kwargs)
+        if isinstance(rv, tuple):
+            nb, exc = rv
+        elif isinstance(rv, dict):
+            nb = rv
+            exc = None
+        else:
+            raise ValueError(f"Unrecognized with_nb return value {type(rv)}: {str(rv)[:100]}")
 
         out_ctx = nullcontext(stdout) if out_path == '-' or out_path is None else open(out_path, 'w')
         with out_ctx as f:
             json.dump(nb, f, indent=indent, ensure_ascii=ensure_ascii)
             if trailing_newline:
                 f.write('\n')
+
+        if exc:
+            raise exc
 
     return wrapper
 
@@ -273,46 +285,6 @@ nb_opts = decos(
 papermill_clean_cmd = papermill.command('clean')(nb_opts(with_nb(papermill_clean)))
 
 
-def run_nb(command, nb):
-    """
-    Run a command with stdin input and capture stdout/stderr, regardless of exit status.
-
-    Args:
-        command (list): Command and arguments as a list
-        nb (dict): Data to be JSON-encoded and passed to stdin
-
-    Returns:
-        tuple: (stdout_data, stderr_data, return_code)
-    """
-    # Open process with pipes for stdin, stdout, and stderr
-    proc = Popen(
-        command,
-        stdin=PIPE,
-        stdout=PIPE,
-        stderr=PIPE,
-        text=False  # Binary mode for consistent encoding handling
-    )
-
-    # Send input and get output, waiting for process to complete
-    try:
-        stdout, stderr = proc.communicate(
-            input=json.dumps(nb).encode('utf-8'),
-            timeout=None  # No timeout, wait indefinitely
-        )
-
-        # Try to decode the output as JSON, but handle cases where it's not JSON
-        try:
-            nb = json.loads(stdout.decode('utf-8')) if stdout else None
-        except json.JSONDecodeError:
-            nb = stdout.decode('utf-8')
-
-        return nb, proc.returncode
-
-    except Exception as e:
-        proc.kill()  # Ensure process is terminated if something goes wrong
-        raise RuntimeError(f"Failed to run command: {e}")
-
-
 @papermill.command('run')
 @nb_opts
 @option('-p', '--parameter', 'parameter_strs', multiple=True, help='"<k>=<v>" variable to set, while executing the notebook')
@@ -320,7 +292,7 @@ def run_nb(command, nb):
 @option('-S', '--autosave-cell-every', type=int, help="How often in seconds to autosave the notebook during long cell executions (0 to disable)")
 @with_nb
 def papermill_run(
-    nb,
+    nb_path,
     keep_ids: bool,
     keep_tags: bool | None,
     parameter_strs: Tuple[str, ...],
@@ -328,26 +300,34 @@ def papermill_run(
     autosave_cell_every: int | None,
 ):
     """Run a notebook using Papermill, clean nondeterministic metadata, normalize output streams."""
-    param_args = []
+    from papermill import PapermillExecutionError, execute_notebook
+
+    parameters = {}
     for param_str in parameter_strs:
         pcs = param_str.split('=', 1)
         if len(pcs) != 2:
             raise ValueError(f"Unrecognized parameter string: {param_str}")
-        param_args.extend(['-p', pcs[0], pcs[1]])
-    nb, returncode = run_nb(
-        [
-            'papermill',
-            *param_args,
-            *([] if request_save_on_cell_execute is None else ['--request-save-on-cell-execute']),
-            *([] if autosave_cell_every is None else ['--autosave-cell-every', str(autosave_cell_every)]),
-        ],
-        nb,
-    )
-    if not nb:
-        raise RuntimeError(f"No nb returned from Papermill; exit code {returncode}")
+        k, v = pcs
+        parameters[k] = _resolve_type(v)
+
+    exc = None
+    with TemporaryDirectory() as tmpdir:
+        tmp_out = join(tmpdir, 'out.ipynb')
+        try:
+            execute_notebook(
+                nb_path, tmp_out,
+                parameters=parameters,
+                request_save_on_cell_execute=request_save_on_cell_execute,
+                **({} if autosave_cell_every is None else dict(autosave_cell_every=autosave_cell_every)),
+            )
+        except PapermillExecutionError as e:
+            exc = e
+
+        with open(tmp_out, 'r') as f:
+            nb = json.load(f)
     nb = papermill_clean(nb, keep_ids=keep_ids, keep_tags=keep_tags)
     nb = merge_outputs(nb)
-    return nb
+    return nb, exc
 
 
 if __name__ == '__main__':

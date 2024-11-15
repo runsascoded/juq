@@ -1,2 +1,2 @@
 click
-utz
+utz>=0.11.3
