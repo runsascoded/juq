@@ -5,7 +5,7 @@ from inspect import getfullargspec
 from subprocess import Popen, PIPE
 from sys import stdin, stdout, stderr
 
-from click import argument, group, option
+from click import argument, group, option, UsageError
 
 
 @group()
@@ -17,8 +17,22 @@ def with_nb_input(func):
     spec = getfullargspec(func)
 
     @wraps(func)
-    @argument('nb_path', required=False)
-    def wrapper(nb_path, *args, **kwargs):
+    @argument('args', required=False, nargs=-1)
+    def wrapper(args, **kwargs):
+        if len(args) == 1:
+            nb_path = args[0]
+        elif len(args) == 2:
+            nb_path, out_path = args
+            if 'out_path' in kwargs and kwargs['out_path']:
+                if out_path != kwargs['out_path']:
+                    raise ValueError(f"Specify -o/--out-path xor a 2nd positional arg: {out_path} != {kwargs['out_path']}")
+            else:
+                kwargs['out_path'] = out_path
+        elif len(args) > 2:
+            raise UsageError("Too many positional arguments, expected [input-nb [output-nb]]")
+        else:
+            nb_path = None
+
         ctx = nullcontext(stdin) if nb_path == '-' or nb_path is None else open(nb_path, 'r')
         with ctx as f:
             nb_str = f.read()
@@ -42,7 +56,7 @@ def with_nb_input(func):
             nb = json.loads(nb_str)
         if 'nb_path' in spec.args or 'nb_path' in spec.kwonlyargs:
             kwargs['nb_path'] = nb_path
-        return func(*args, nb=nb, indent=indent, trailing_newline=trailing_newline, **kwargs)
+        return func(nb=nb, indent=indent, trailing_newline=trailing_newline, **kwargs)
     return wrapper
 
 
@@ -57,7 +71,7 @@ def with_nb(func):
     @option('-o', '--out-path', help='Write to this file instead of stdout')
     @option('-t/-T', '--trailing-newline/--no-trailing-newline', default=None, help='Enforce presence or absence of a trailing newline (default: match input)')
     @with_nb_input
-    def wrapper(*args, nb_path, ensure_ascii=False, indent=None, trailing_newline=None, **kwargs):
+    def wrapper(nb_path, *args, ensure_ascii=False, indent=None, trailing_newline=None, **kwargs):
         """Merge consecutive "stream" outputs (e.g. stderr)."""
         in_place = kwargs.get('in_place')
         out_path = kwargs.get('out_path')
