@@ -1,11 +1,15 @@
+from __future__ import annotations
+
 import json
 from contextlib import nullcontext
 from functools import wraps
 from inspect import getfullargspec
 from subprocess import Popen, PIPE
 from sys import stdin, stdout, stderr
+from typing import Tuple
 
 from click import argument, group, option, UsageError
+from utz import decos
 
 
 @group()
@@ -66,7 +70,6 @@ def with_nb(func):
     @wraps(func)
     @option('-a', '--ensure-ascii', is_flag=True, help='Octal-escape non-ASCII characters in JSON output')
     @option('-i', '--in-place', is_flag=True, help='Modify [NB_PATH] in-place')
-    @option('-I', '--keep-ids', is_flag=True, help='Keep cell ids')
     @option('-n', '--indent', type=int, help='Indentation level for the output notebook JSON (default: infer from input)')
     @option('-o', '--out-path', help='Write to this file instead of stdout')
     @option('-t/-T', '--trailing-newline/--no-trailing-newline', default=None, help='Enforce presence or absence of a trailing newline (default: match input)')
@@ -219,7 +222,11 @@ def papermill():
     pass
 
 
-def papermill_clean_cell(cell, keep_ids: bool = False):
+def papermill_clean_cell(
+    cell,
+    keep_ids: bool = False,
+    keep_tags: bool | None = False,
+):
     if not keep_ids and 'id' in cell:
         del cell['id']
     if 'metadata' in cell:
@@ -227,18 +234,30 @@ def papermill_clean_cell(cell, keep_ids: bool = False):
         for k in [ 'papermill', 'execution', 'widgets' ]:
             if k in metadata:
                 del metadata[k]
-        if 'tags' in metadata and not metadata['tags']:
-            del metadata['tags']
+        if keep_tags is True:
+            if 'tags' not in metadata:
+                metadata['tags'] = []
+        elif keep_tags is False:
+            if 'tags' in metadata and not metadata['tags']:
+                del metadata['tags']
     return cell
 
 
-def papermill_clean(nb, keep_ids: bool = False):
+def papermill_clean(
+    nb,
+    keep_ids: bool = False,
+    keep_tags: bool | None = False,
+):
     """Remove Papermill metadata from a notebook.
 
     Removes `.metadata.papermill` and `.cells[*].metadata.{papermill,execution,widgets}`.
     """
     nb['cells'] = [
-        papermill_clean_cell(cell, keep_ids=keep_ids)
+        papermill_clean_cell(
+            cell,
+            keep_ids=keep_ids,
+            keep_tags=keep_tags,
+        )
         for cell in nb['cells']
     ]
     metadata = nb['metadata']
@@ -247,7 +266,11 @@ def papermill_clean(nb, keep_ids: bool = False):
     return nb
 
 
-papermill_clean_cmd = papermill.command('clean')(with_nb(papermill_clean))
+nb_opts = decos(
+    option('-I', '--keep-ids', is_flag=True, help='Keep cell ids'),
+    option('-k', '--keep-tags', is_flag=True, default=None, help='When a cell\'s `tags` array is empty, enforce its presence or absence in the output'),
+)
+papermill_clean_cmd = papermill.command('clean')(nb_opts(with_nb(papermill_clean)))
 
 
 def run_nb(command, nb):
@@ -291,9 +314,15 @@ def run_nb(command, nb):
 
 
 @papermill.command('run')
+@nb_opts
 @option('-p', '--parameter', 'parameter_strs', multiple=True, help='"<k>=<v>" variable to set, while executing the notebook')
 @with_nb
-def papermill_run(nb, keep_ids, parameter_strs):
+def papermill_run(
+    nb,
+    keep_ids: bool,
+    keep_tags: bool | None,
+    parameter_strs: Tuple[str, ...],
+):
     """Run a notebook using Papermill, clean nondeterministic metadata, normalize output streams."""
     param_args = []
     for param_str in parameter_strs:
@@ -304,7 +333,7 @@ def papermill_run(nb, keep_ids, parameter_strs):
     nb, returncode = run_nb(['papermill', *param_args], nb)
     if not nb:
         raise RuntimeError(f"No nb returned from Papermill; exit code {returncode}")
-    nb = papermill_clean(nb, keep_ids=keep_ids)
+    nb = papermill_clean(nb, keep_ids=keep_ids, keep_tags=keep_tags)
     nb = merge_outputs(nb)
     return nb
 
