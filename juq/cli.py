@@ -316,12 +316,16 @@ def run_nb(command, nb):
 @papermill.command('run')
 @nb_opts
 @option('-p', '--parameter', 'parameter_strs', multiple=True, help='"<k>=<v>" variable to set, while executing the notebook')
+@option('-s', '--request-save-on-cell-execute', is_flag=True, default=None, help="Request save notebook after each cell execution")
+@option('-S', '--autosave-cell-every', type=int, help="How often in seconds to autosave the notebook during long cell executions (0 to disable)")
 @with_nb
 def papermill_run(
     nb,
     keep_ids: bool,
     keep_tags: bool | None,
     parameter_strs: Tuple[str, ...],
+    request_save_on_cell_execute: bool | None,
+    autosave_cell_every: int | None,
 ):
     """Run a notebook using Papermill, clean nondeterministic metadata, normalize output streams."""
     param_args = []
@@ -330,7 +334,15 @@ def papermill_run(
         if len(pcs) != 2:
             raise ValueError(f"Unrecognized parameter string: {param_str}")
         param_args.extend(['-p', pcs[0], pcs[1]])
-    nb, returncode = run_nb(['papermill', *param_args], nb)
+    nb, returncode = run_nb(
+        [
+            'papermill',
+            *param_args,
+            *([] if request_save_on_cell_execute is None else ['--request-save-on-cell-execute']),
+            *([] if autosave_cell_every is None else ['--autosave-cell-every', str(autosave_cell_every)]),
+        ],
+        nb,
+    )
     if not nb:
         raise RuntimeError(f"No nb returned from Papermill; exit code {returncode}")
     nb = papermill_clean(nb, keep_ids=keep_ids, keep_tags=keep_tags)
