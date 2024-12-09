@@ -6,7 +6,7 @@ from tempfile import TemporaryDirectory
 from papermill import execute_notebook, PapermillExecutionError
 from pytest import raises
 
-from juq.cli import papermill_clean_cmd, papermill_run
+from juq.cli import papermill_clean_cmd, papermill_run_cmd
 
 TEST_DIR = join(dirname(__file__), "files")
 MERGE_OUTPUTS_DIR = join(TEST_DIR, "merge-outputs")
@@ -37,7 +37,7 @@ def test_papermill_error():
     with TemporaryDirectory() as tmpdir:
         out_path1 = join(tmpdir, 'out1.ipynb')
         with raises(PapermillExecutionError):
-            papermill_run.callback(
+            papermill_run_cmd.callback(
                 (nb_path, out_path1),
                 keep_ids=False,
                 keep_tags=None,

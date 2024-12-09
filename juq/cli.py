@@ -225,7 +225,10 @@ def merge_outputs(nb):
     return nb
 
 
-merge_outputs_cmd = cli.command('merge-outputs')(with_nb(merge_outputs))
+merge_outputs_cmd = decos(
+    cli.command('merge-outputs'),
+    with_nb,
+)(merge_outputs)
 
 
 @cli.group
@@ -282,22 +285,21 @@ nb_opts = decos(
     option('-I', '--keep-ids', is_flag=True, help='Keep cell ids'),
     option('-k', '--keep-tags', is_flag=True, default=None, help='When a cell\'s `tags` array is empty, enforce its presence or absence in the output'),
 )
-papermill_clean_cmd = papermill.command('clean')(nb_opts(with_nb(papermill_clean)))
+
+papermill_clean_cmd = decos(
+    papermill.command('clean'),
+    nb_opts,
+    with_nb,
+)(papermill_clean)
 
 
-@papermill.command('run')
-@nb_opts
-@option('-p', '--parameter', 'parameter_strs', multiple=True, help='"<k>=<v>" variable to set, while executing the notebook')
-@option('-s', '--request-save-on-cell-execute', is_flag=True, default=None, help="Request save notebook after each cell execution")
-@option('-S', '--autosave-cell-every', type=int, help="How often in seconds to autosave the notebook during long cell executions (0 to disable)")
-@with_nb
 def papermill_run(
     nb_path,
-    keep_ids: bool,
-    keep_tags: bool | None,
-    parameter_strs: Tuple[str, ...],
-    request_save_on_cell_execute: bool | None,
-    autosave_cell_every: int | None,
+    keep_ids: bool = False,
+    keep_tags: bool | None = False,
+    parameter_strs: Tuple[str, ...] = (),
+    request_save_on_cell_execute: bool | None = None,
+    autosave_cell_every: int | None = None,
 ):
     """Run a notebook using Papermill, clean nondeterministic metadata, normalize output streams."""
     from papermill import PapermillExecutionError, execute_notebook
@@ -328,6 +330,16 @@ def papermill_run(
     nb = papermill_clean(nb, keep_ids=keep_ids, keep_tags=keep_tags)
     nb = merge_outputs(nb)
     return nb, exc
+
+
+papermill_run_cmd = decos(
+    papermill.command('run'),
+    nb_opts,
+    option('-p', '--parameter', 'parameter_strs', multiple=True, help='"<k>=<v>" variable to set, while executing the notebook'),
+    option('-s', '--request-save-on-cell-execute', is_flag=True, default=None, help="Request save notebook after each cell execution"),
+    option('-S', '--autosave-cell-every', type=int, help="How often in seconds to autosave the notebook during long cell executions (0 to disable)"),
+    with_nb,
+)(papermill_run)
 
 
 if __name__ == '__main__':
