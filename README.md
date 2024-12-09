@@ -52,7 +52,7 @@ Merge consecutive "stream" outputs (e.g. stderr):
 <!-- `bmdf -- juq merge-outputs --help` -->
 ```bash
 juq merge-outputs --help
-# Usage: juq merge-outputs [OPTIONS] [NB_PATH]
+# Usage: juq merge-outputs [OPTIONS] [ARGS]...
 #
 #   Merge consecutive "stream" outputs (e.g. stderr).
 #
@@ -60,7 +60,6 @@ juq merge-outputs --help
 #   -a, --ensure-ascii              Octal-escape non-ASCII characters in JSON
 #                                   output
 #   -i, --in-place                  Modify [NB_PATH] in-place
-#   -I, --keep-ids                  Keep cell ids
 #   -n, --indent INTEGER            Indentation level for the output notebook
 #                                   JSON (default: infer from input)
 #   -o, --out-path TEXT             Write to this file instead of stdout
@@ -88,7 +87,7 @@ jupyter nbconvert --coalesce-streams --inplace notebook.ipynb
 <!-- `bmdf -- juq papermill clean --help` -->
 ```bash
 juq papermill clean --help
-# Usage: juq papermill clean [OPTIONS] [NB_PATH]
+# Usage: juq papermill clean [OPTIONS] [ARGS]...
 #
 #   Remove Papermill metadata from a notebook.
 #
@@ -96,10 +95,12 @@ juq papermill clean --help
 #   `.cells[*].metadata.{papermill,execution,widgets}`.
 #
 # Options:
+#   -I, --keep-ids                  Keep cell ids
+#   -k, --keep-tags                 When a cell's `tags` array is empty, enforce
+#                                   its presence or absence in the output
 #   -a, --ensure-ascii              Octal-escape non-ASCII characters in JSON
 #                                   output
 #   -i, --in-place                  Modify [NB_PATH] in-place
-#   -I, --keep-ids                  Keep cell ids
 #   -n, --indent INTEGER            Indentation level for the output notebook
 #                                   JSON (default: infer from input)
 #   -o, --out-path TEXT             Write to this file instead of stdout
@@ -113,18 +114,27 @@ juq papermill clean --help
 <!-- `bmdf -- juq papermill run --help` -->
 ```bash
 juq papermill run --help
-# Usage: juq papermill run [OPTIONS] [NB_PATH]
+# Usage: juq papermill run [OPTIONS] [ARGS]...
 #
 #   Run a notebook using Papermill, clean nondeterministic metadata, normalize
 #   output streams.
 #
 # Options:
+#   -I, --keep-ids                  Keep cell ids
+#   -k, --keep-tags                 When a cell's `tags` array is empty, enforce
+#                                   its presence or absence in the output
 #   -p, --parameter TEXT            "<k>=<v>" variable to set, while executing
 #                                   the notebook
+#   -s, --request-save-on-cell-execute
+#                                   Request save notebook after each cell
+#                                   execution
+#   -S, --autosave-cell-every INTEGER
+#                                   How often in seconds to autosave the
+#                                   notebook during long cell executions (0 to
+#                                   disable)
 #   -a, --ensure-ascii              Octal-escape non-ASCII characters in JSON
 #                                   output
 #   -i, --in-place                  Modify [NB_PATH] in-place
-#   -I, --keep-ids                  Keep cell ids
 #   -n, --indent INTEGER            Indentation level for the output notebook
 #                                   JSON (default: infer from input)
 #   -o, --out-path TEXT             Write to this file instead of stdout
