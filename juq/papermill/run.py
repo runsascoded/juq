@@ -6,7 +6,7 @@ from typing import Tuple
 
 from click import option
 from papermill.cli import _resolve_type
-from utz import decos
+from utz import decos, env
 
 from juq.cli import with_nb
 from juq.merge_outputs import merge_outputs
@@ -37,12 +37,13 @@ def papermill_run(
     with TemporaryDirectory() as tmpdir:
         tmp_out = join(tmpdir, 'out.ipynb')
         try:
-            execute_notebook(
-                nb_path, tmp_out,
-                parameters=parameters,
-                request_save_on_cell_execute=request_save_on_cell_execute,
-                **({} if autosave_cell_every is None else dict(autosave_cell_every=autosave_cell_every)),
-            )
+            with env(PAPERMILL='1'):
+                execute_notebook(
+                    nb_path, tmp_out,
+                    parameters=parameters,
+                    request_save_on_cell_execute=request_save_on_cell_execute,
+                    **({} if autosave_cell_every is None else dict(autosave_cell_every=autosave_cell_every)),
+                )
         except PapermillExecutionError as e:
             exc = e
 
