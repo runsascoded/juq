@@ -1,17 +1,15 @@
 import json
 from os import path
-from os.path import dirname
 from tempfile import TemporaryDirectory
 
 from juq.cli import merge_outputs_cmd
-
-TEST_DIR = path.join(dirname(__file__), "files", "merge-outputs")
+from tests.test_papermill_clean import MERGE_OUTPUTS_DIR
 
 
 def test_merge_cell_outputs():
-    nb_path = path.join(TEST_DIR, "split-outputs.ipynb")
+    nb_path = path.join(MERGE_OUTPUTS_DIR, "split-outputs.ipynb")
     out_name = "merged-outputs.ipynb"
-    expected_path = path.join(TEST_DIR, out_name)
+    expected_path = path.join(MERGE_OUTPUTS_DIR, out_name)
     with TemporaryDirectory() as tmpdir:
         actual_path = path.join(tmpdir, out_name)
         merge_outputs_cmd.callback((nb_path, actual_path))

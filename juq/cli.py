@@ -296,7 +296,7 @@ papermill_clean_cmd = decos(
 def papermill_run(
     nb_path,
     keep_ids: bool = False,
-    keep_tags: bool | None = False,
+    keep_tags: bool | None = None,
     parameter_strs: Tuple[str, ...] = (),
     request_save_on_cell_execute: bool | None = None,
     autosave_cell_every: int | None = None,
@@ -327,6 +327,43 @@ def papermill_run(
 
         with open(tmp_out, 'r') as f:
             nb = json.load(f)
+
+    if keep_tags is None:
+        with open(nb_path, 'r') as f:
+            nb0 = json.load(f)
+        cells0 = nb0['cells']
+        cells1 = nb['cells']
+
+        idx1 = 0
+
+        def skip_injected_param_cells():
+            """Skip ``idx1`` past any "injected-parameters" or "error" cells Papermill may have inserted."""
+            nonlocal idx1
+            while True:
+                cell1 = cells1[idx1]
+                md1 = cell1.get('metadata', {})
+                tags1 = md1.get('tags')
+                if not tags1 or not {"papermill-error-cell-tag", 'injected-parameters'} & set(tags1):
+                    return cell1, md1, tags1
+                idx1 += 1
+
+        for idx0, cell0 in enumerate(cells0):
+            md0 = cell0['metadata']
+            cell1, md1, tags1 = skip_injected_param_cells()
+            source0 = cell0.get('source')
+            source1 = cell1.get('source')
+            if source0 != source1:
+                raise ValueError(f"Cell {idx0=}: {source0=} != {source1=}")
+            if 'tags' not in md0 and tags1 == []:
+                del md1['tags']
+            idx1 += 1
+        try:
+            skip_injected_param_cells()
+        except IndexError:
+            pass
+        if idx1 != len(cells1):
+            raise ValueError(f'"After" notebook has {len(cells1) - idx1} extra cells: {json.dump(cells1[idx1:], stdout)}')
+
     nb = papermill_clean(nb, keep_ids=keep_ids, keep_tags=keep_tags)
     nb = merge_outputs(nb)
     return nb, exc

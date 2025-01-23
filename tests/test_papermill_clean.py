@@ -1,5 +1,5 @@
 import json
-from os.path import dirname, join
+from os.path import join
 from subprocess import check_call, CalledProcessError
 from tempfile import TemporaryDirectory
 
@@ -7,9 +7,7 @@ from papermill import execute_notebook, PapermillExecutionError
 from pytest import raises
 
 from juq.cli import papermill_clean_cmd, papermill_run_cmd
-
-TEST_DIR = join(dirname(__file__), "files")
-MERGE_OUTPUTS_DIR = join(TEST_DIR, "merge-outputs")
+from tests.utils import MERGE_OUTPUTS_DIR, TEST_DIR
 
 
 def test_papermill_clean():
