@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 from utz import err, decos
 
 from juq.cli import with_nb, cli
@@ -8,28 +10,24 @@ def merge_cell_outputs(cell):
         return cell
     outputs = cell['outputs']
     new = []
-    prv = None
-    for cur in outputs:
-        if (
-            prv and
-            prv['output_type'] == "stream" and
-            cur['output_type'] == "stream" and
-            prv.get('name') and
-            prv.get('name') == cur.get('name')
-        ):
-            prv_keys = set(prv.keys())
-            cur_keys = set(cur.keys())
-            keys = { 'output_type', 'name', 'text' }
-            if prv_keys != keys:
-                err(f"Unrecognized keys in prv: {prv_keys - keys}")
-            elif cur_keys != keys:
-                err(f"Unrecognized keys in cur: {cur_keys - keys}")
-            else:
-                prv['text'] += cur['text']
-                prv = cur
-                continue
+    i = 0
+    n = len(outputs)
+    while i < n:
+        cur = deepcopy(outputs[i])
+        if cur['output_type'] == "stream" and cur.get('name'):
+            name = cur['name']
+            while True:
+                i += 1
+                if i == n:
+                    break
+                nxt = outputs[i]
+                if nxt['output_type'] == "stream" and nxt.get('name') == name:
+                    cur['text'] += nxt['text']
+                else:
+                    break
+        else:
+            i += 1
         new.append(cur)
-        prv = cur
     cell['outputs'] = new
     return cell
 
