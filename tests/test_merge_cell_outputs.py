@@ -2,7 +2,7 @@ import json
 from os import path
 from tempfile import TemporaryDirectory
 
-from juq.cli import merge_outputs_cmd
+from juq.merge_outputs import merge_outputs_cmd
 from tests.test_papermill_clean import MERGE_OUTPUTS_DIR
 
 

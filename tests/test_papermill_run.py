@@ -2,7 +2,7 @@ import json
 from os.path import join
 from tempfile import TemporaryDirectory
 
-from juq.cli import papermill_run_cmd
+from juq.papermill.run import papermill_run_cmd
 from tests.test_papermill_clean import TEST_DIR
 
 

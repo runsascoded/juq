@@ -6,7 +6,8 @@ from tempfile import TemporaryDirectory
 from papermill import execute_notebook, PapermillExecutionError
 from pytest import raises
 
-from juq.cli import papermill_clean_cmd, papermill_run_cmd
+from juq.papermill.clean import papermill_clean_cmd
+from juq.papermill.run import papermill_run_cmd
 from tests.utils import MERGE_OUTPUTS_DIR, TEST_DIR
 
 
