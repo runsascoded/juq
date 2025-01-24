@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from utz import decos
 
 from juq.cli import with_nb
