@@ -95,9 +95,10 @@ juq papermill clean --help
 #   `.cells[*].metadata.{papermill,execution,widgets}`.
 #
 # Options:
-#   -I, --keep-ids                  Keep cell ids
-#   -k, --keep-tags                 When a cell's `tags` array is empty, enforce
-#                                   its presence or absence in the output
+#   -I, --keep-ids                  Keep cell ids; by default they are removed.
+#   -k, --keep-tags / -K, --no-keep-tags
+#                                   When a cell's `tags` array is empty, enforce
+#                                   its presence or absence in the output.
 #   -a, --ensure-ascii              Octal-escape non-ASCII characters in JSON
 #                                   output
 #   -i, --in-place                  Modify [NB_PATH] in-place
@@ -120,9 +121,10 @@ juq papermill run --help
 #   output streams.
 #
 # Options:
-#   -I, --keep-ids                  Keep cell ids
-#   -k, --keep-tags                 When a cell's `tags` array is empty, enforce
-#                                   its presence or absence in the output
+#   -I, --keep-ids                  Keep cell ids; by default they are removed.
+#   -k, --keep-tags / -K, --no-keep-tags
+#                                   When a cell's `tags` array is empty, enforce
+#                                   its presence or absence in the output.
 #   -p, --parameter TEXT            "<k>=<v>" variable to set, while executing
 #                                   the notebook
 #   -s, --request-save-on-cell-execute

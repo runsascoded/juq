@@ -46,3 +46,19 @@ def test_run_previously_run_nb():
         "mixed-tags-params-333.ipynb",
         parameter_strs=("num=333",),
     )
+
+
+def test_mixed_tags_keep():
+    check(
+        "mixed-tags.ipynb",
+        "mixed-tags-keep.ipynb",
+        keep_tags=True,
+    )
+
+
+def test_mixed_tags_drop():
+    check(
+        "mixed-tags.ipynb",
+        "mixed-tags-drop.ipynb",
+        keep_tags=False,
+    )
