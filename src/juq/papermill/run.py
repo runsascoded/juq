@@ -16,6 +16,67 @@ from juq.papermill import nb_opts, papermill
 from juq.papermill.clean import papermill_clean
 
 
+INJECTED_TAGS = { "papermill-error-cell-tag", 'injected-parameters' }
+
+
+class AlignmentError(ValueError):
+    """Indicates a failure to align a generated notebook against its input.
+
+    Papermill always adds empty ``.cells[].metadata.tags`` arrays, which we try to undo when -k/--keep-tags is not
+    specified. Output notebooks may have "injected-parameters" cells inserted by Papermill, so we attempt to align the
+    input and output notebooks, to mirror presence/absence of ``tags``. ``AlignmentError`` is raised when this process
+    fails (e.g. because there appear to be additional, unrecognized cells added to the "output" notebook).
+    """
+    pass
+
+
+def harmonize_empty_tags(cells0, cells1, exc):
+    """When -k/--keep-tags is not specified, remove empty ``.cells[].metadata.tags`` arrays added by Papermill."""
+    idx1 = 0
+
+    def skip_injected_param_cells():
+        """Skip ``idx1`` past any "injected-parameters" or "error" cells Papermill may have inserted."""
+        nonlocal idx1
+        while True:
+            cell1 = cells1[idx1]
+            md1 = cell1.get('metadata', {})
+            tags1 = md1.get('tags')
+            if not tags1 or not INJECTED_TAGS & set(tags1):
+                return cell1, md1, tags1
+            idx1 += 1
+
+    try:
+        for idx0, cell0 in enumerate(cells0):
+            md0 = cell0['metadata']
+            tags0 = md0.get('tags')
+            if tags0 and len(tags0) == 1 and tags0[0] in INJECTED_TAGS:
+                cell1 = cells1[idx1]
+                md1 = cell1.get('metadata', {})
+                tags1 = md1.get('tags')
+                if tags0 != tags1:
+                    raise AlignmentError(f"{tags0=} != {tags1=}")
+            else:
+                cell1, md1, tags1 = skip_injected_param_cells()
+                source0 = cell0.get('source')
+                source1 = cell1.get('source')
+                if source0 != source1:
+                    raise AlignmentError(f"Cell {idx0=}: {source0=} != {source1=}")
+                if 'tags' not in md0 and tags1 == []:
+                    del md1['tags']
+            idx1 += 1
+        try:
+            skip_injected_param_cells()
+        except IndexError:
+            pass
+        if idx1 != len(cells1):
+            raise AlignmentError(f'"After" notebook has {len(cells1) - idx1} extra cells: {json.dump(cells1[idx1:], stdout)}')
+    except AlignmentError as align_exc:
+        if exc:
+            align_exc.__cause__ = exc
+        exc = align_exc
+    return exc
+
+
 def papermill_run(
     nb_path,
     keep_ids: bool = False,
@@ -57,36 +118,7 @@ def papermill_run(
             nb0 = json.load(f)
         cells0 = nb0['cells']
         cells1 = nb['cells']
-
-        idx1 = 0
-
-        def skip_injected_param_cells():
-            """Skip ``idx1`` past any "injected-parameters" or "error" cells Papermill may have inserted."""
-            nonlocal idx1
-            while True:
-                cell1 = cells1[idx1]
-                md1 = cell1.get('metadata', {})
-                tags1 = md1.get('tags')
-                if not tags1 or not {"papermill-error-cell-tag", 'injected-parameters'} & set(tags1):
-                    return cell1, md1, tags1
-                idx1 += 1
-
-        for idx0, cell0 in enumerate(cells0):
-            md0 = cell0['metadata']
-            cell1, md1, tags1 = skip_injected_param_cells()
-            source0 = cell0.get('source')
-            source1 = cell1.get('source')
-            if source0 != source1:
-                raise ValueError(f"Cell {idx0=}: {source0=} != {source1=}")
-            if 'tags' not in md0 and tags1 == []:
-                del md1['tags']
-            idx1 += 1
-        try:
-            skip_injected_param_cells()
-        except IndexError:
-            pass
-        if idx1 != len(cells1):
-            raise ValueError(f'"After" notebook has {len(cells1) - idx1} extra cells: {json.dump(cells1[idx1:], stdout)}')
+        exc = harmonize_empty_tags(cells0, cells1, exc)
 
     nb = papermill_clean(nb, keep_ids=keep_ids, keep_tags=keep_tags)
     nb = merge_outputs(nb)

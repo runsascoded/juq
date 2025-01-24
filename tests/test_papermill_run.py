@@ -38,3 +38,11 @@ def test_mixed_tags_params():
         "mixed-tags-params-222.ipynb",
         parameter_strs=("num=222",),
     )
+
+
+def test_run_previously_run_nb():
+    check(
+        "mixed-tags-params-222.ipynb",
+        "mixed-tags-params-333.ipynb",
+        parameter_strs=("num=333",),
+    )
