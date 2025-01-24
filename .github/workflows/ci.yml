@@ -23,7 +23,7 @@ jobs:
       - name: Setup test
         run: python -m ipykernel install --user --name python3
       - name: Run tests
-        run: pytest -v
+        run: pytest -v tests
   release:
     name: Release
     if: startsWith(github.ref, 'refs/tags/')
