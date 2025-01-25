@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "juq.py"
+version = "0.4.0"
+description = "Query, run, and clean Jupyter notebooks (name is inspired by \"`jq` for Jupyter\")"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [
+    { name = "Ryan Williams", email = "ryan@runsascoded.com" },
+]
+dependencies = [
+    "click",
+    "utz>=0.11.3",
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+Homepage = "https://github.com/runsascoded/juq"
+Author = "https://github.com/ryan-williams"
+
+[project.scripts]
+juq = "juq.main:main"
+
+[project.optional-dependencies]
+test = [
+    "ipykernel",
+    "papermill",
+    "pytest",
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+packages = ["juq"]
