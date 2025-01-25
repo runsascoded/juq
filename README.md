@@ -1,5 +1,5 @@
 # `juq`
-Query, run, and clean Jupyter notebooks (name is inspired by "`jq` for Jupyter")
+Query, run, and clean/normalize Jupyter notebooks
 
 [![juq.py on PyPI](https://img.shields.io/pypi/v/juq.py?label=juq.py)][juq.py]
 
