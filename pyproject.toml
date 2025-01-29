@@ -38,4 +38,4 @@ test = [
 
 [tool.setuptools]
 package-dir = {"" = "src"}
-packages = ["juq"]
+packages = { find = { where = ["src"] } }
