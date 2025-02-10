@@ -36,11 +36,11 @@ jobs:
           python-version: ${{ env.python-version }}
           cache: 'pip'
       - name: Install release deps
-        run: pip install setuptools twine wheel
+        run: pip install build twine
       - name: Install juq
         run: pip install -e .
       - name: Build release
-        run: python setup.py sdist bdist_wheel
+        run: python -m build
       - name: Publish release
         env:
           TWINE_USERNAME: __token__
