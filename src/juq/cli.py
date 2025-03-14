@@ -76,21 +76,21 @@ def with_nb(func):
         *args,
         out_path: str | None = None,
         ensure_ascii: bool = False,
+        in_place: bool = False,
         indent: int | None = None,
         trailing_newline: bool | None = None,
         **kwargs,
     ):
         """Merge consecutive "stream" outputs (e.g. stderr)."""
-        in_place = kwargs.get('in_place')
         if in_place:
             if out_path:
                 raise ValueError("Cannot use `-i` with `-o`")
             if not nb_path or nb_path == '-':
                 raise ValueError("Cannot use `-i` without explicit `nb_path`")
             out_path = nb_path
-            kwargs['out_path'] = out_path
 
         kwargs['nb_path'] = nb_path
+        kwargs['out_path'] = out_path
         rv = call(func, *args, **kwargs)
         if isinstance(rv, tuple):
             nb, exc = rv
