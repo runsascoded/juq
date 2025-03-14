@@ -1,5 +1,5 @@
 from .cli import cli
-from . import cells, merge_outputs
+from . import cells, merge_outputs, renumber
 from .papermill import clean, run
 
 
