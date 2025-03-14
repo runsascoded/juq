@@ -23,6 +23,8 @@ jobs:
       - name: Setup test
         run: python -m ipykernel install --user --name python3
       - name: Run tests
+        env:
+          TERM: xterm
         run: pytest -v tests
   release:
     name: Release

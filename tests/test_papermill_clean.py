@@ -5,6 +5,7 @@ from tempfile import TemporaryDirectory
 
 from papermill import execute_notebook, PapermillExecutionError
 from pytest import raises
+from utz import env
 
 from juq.papermill.clean import papermill_clean_cmd
 from juq.papermill.run import papermill_run_cmd
@@ -33,7 +34,7 @@ def test_papermill_clean():
 
 def test_papermill_error():
     nb_path = join(TEST_DIR, "test-err.ipynb")
-    with TemporaryDirectory() as tmpdir:
+    with TemporaryDirectory() as tmpdir, env(NO_COLOR="1"):
         out_path1 = join(tmpdir, 'out1.ipynb')
         with raises(PapermillExecutionError):
             papermill_run_cmd.callback(
