@@ -19,21 +19,18 @@ def with_nb_input(func):
     spec = getfullargspec(func)
 
     @wraps(func)
-    @argument('args', required=False, nargs=-1)
-    def wrapper(args, **kwargs):
-        if len(args) == 1:
-            nb_path = args[0]
-        elif len(args) == 2:
-            nb_path, out_path = args
-            if 'out_path' in kwargs and kwargs['out_path']:
-                if out_path != kwargs['out_path']:
-                    raise ValueError(f"Specify -o/--out-path xor a 2nd positional arg: {out_path} != {kwargs['out_path']}")
-            else:
-                kwargs['out_path'] = out_path
-        elif len(args) > 2:
-            raise UsageError("Too many positional arguments, expected [input-nb [output-nb]]")
-        else:
-            nb_path = None
+    @argument('nb_path', required=False)
+    @argument('out_path', required=False)
+    def wrapper(
+        nb_path: str | None = None,
+        out_path: str | None = None,
+        **kwargs,
+    ):
+        if 'out_path' in kwargs and kwargs['out_path']:
+            if out_path != kwargs['out_path']:
+                raise ValueError(f"Specify -o/--out-path xor a 2nd positional arg: {out_path} != {kwargs['out_path']}")
+        elif recvs(func, 'out_path'):
+            kwargs['out_path'] = out_path
 
         ctx = nullcontext(stdin) if nb_path == '-' or nb_path is None else open(nb_path, 'r')
         with ctx as f:
@@ -60,7 +57,11 @@ def with_nb_input(func):
             kwargs['nb'] = nb
         if recvs(func, 'nb_path') or 'nb_path' in spec.kwonlyargs:
             kwargs['nb_path'] = nb_path
-        return func(indent=indent, trailing_newline=trailing_newline, **kwargs)
+        if recvs(func, 'indent'):
+            kwargs['indent'] = indent
+        if recvs(func, 'trailing_newline'):
+            kwargs['trailing_newline'] = trailing_newline
+        return func(**kwargs)
     return wrapper
 
 
@@ -72,16 +73,24 @@ def with_nb(func):
     @option('-t/-T', '--trailing-newline/--no-trailing-newline', default=None, help='Enforce presence or absence of a trailing newline (default: match input)')
     @with_nb_input
     @wraps(func)
-    def wrapper(nb_path, *args, ensure_ascii=False, indent=None, trailing_newline=None, **kwargs):
+    def wrapper(
+        nb_path: str,
+        *args,
+        out_path: str | None = None,
+        ensure_ascii: bool = False,
+        indent: int | None = None,
+        trailing_newline: bool | None = None,
+        **kwargs,
+    ):
         """Merge consecutive "stream" outputs (e.g. stderr)."""
         in_place = kwargs.get('in_place')
-        out_path = kwargs.get('out_path')
         if in_place:
             if out_path:
                 raise ValueError("Cannot use `-i` with `-o`")
             if not nb_path or nb_path == '-':
                 raise ValueError("Cannot use `-i` without explicit `nb_path`")
             out_path = nb_path
+            kwargs['out_path'] = out_path
 
         kwargs['nb_path'] = nb_path
         kwargs = {

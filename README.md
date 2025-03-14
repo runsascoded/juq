@@ -18,6 +18,22 @@ Query, run, and clean/normalize Jupyter notebooks
 pip install juq.py
 ```
 
+<!-- `bmdf juq` -->
+```bash
+juq
+# Usage: juq [OPTIONS] COMMAND [ARGS]...
+#
+# Options:
+#   --help  Show this message and exit.
+#
+# Commands:
+#   cells          Slice/Filter cells.
+#   merge-outputs  Merge consecutive "stream" outputs (e.g.
+#   papermill      Wrapper for Papermill commands (`clean`, `run`).
+#   renumber       Renumber cells (and outputs) with non-null...
+```
+
+
 ## Usage <a id="usage"></a>
 
 ### `juq cells` <a id="juq-cells"></a>
@@ -52,7 +68,7 @@ Merge consecutive "stream" outputs (e.g. stderr):
 <!-- `bmdf -- juq merge-outputs --help` -->
 ```bash
 juq merge-outputs --help
-# Usage: juq merge-outputs [OPTIONS] [ARGS]...
+# Usage: juq merge-outputs [OPTIONS] [NB_PATH] [OUT_PATH]
 #
 #   Merge consecutive "stream" outputs (e.g. stderr).
 #
@@ -83,11 +99,15 @@ As of [nbconvert#2089](https://github.com/jupyter/nbconvert/pull/2089), this sho
 jupyter nbconvert --coalesce-streams --inplace notebook.ipynb
 ```
 
+See also: [test_merge_cell_outputs.py].
+
+[test_merge_cell_outputs.py]: tests/test_merge_cell_outputs.py
+
 ### `juq papermill clean` <a id="juq-papermill-clean"></a>
 <!-- `bmdf -- juq papermill clean --help` -->
 ```bash
 juq papermill clean --help
-# Usage: juq papermill clean [OPTIONS] [ARGS]...
+# Usage: juq papermill clean [OPTIONS] [NB_PATH] [OUT_PATH]
 #
 #   Remove Papermill metadata from a notebook.
 #
@@ -111,11 +131,15 @@ juq papermill clean --help
 #   --help                          Show this message and exit.
 ```
 
+See also: [test_papermill_clean.py].
+
+[test_papermill_clean.py]: tests/test_papermill_clean.py
+
 ### `juq papermill run` <a id="juq-papermill-run"></a>
 <!-- `bmdf -- juq papermill run --help` -->
 ```bash
 juq papermill run --help
-# Usage: juq papermill run [OPTIONS] [ARGS]...
+# Usage: juq papermill run [OPTIONS] [NB_PATH] [OUT_PATH]
 #
 #   Run a notebook using Papermill, clean nondeterministic metadata, normalize
 #   output streams.
@@ -145,5 +169,9 @@ juq papermill run --help
 #                                   newline (default: match input)
 #   --help                          Show this message and exit.
 ```
+
+See also: [test_papermill_run.py].
+
+[test_papermill_run.py]: tests/test_papermill_run.py
 
 [juq.py]: https://pypi.org/project/juq.py/

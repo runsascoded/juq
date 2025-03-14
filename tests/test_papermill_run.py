@@ -20,7 +20,7 @@ def check(
     name = basename(expected_path)
     with TemporaryDirectory() as tmpdir:
         out_path = join(tmpdir, name)
-        papermill_run_cmd.callback((in_path, out_path), **kwargs)
+        papermill_run_cmd.callback(in_path, out_path, **kwargs)
         with open(out_path, 'r') as f:
             actual = json.load(f)
     with open(expected_path, 'r') as f:

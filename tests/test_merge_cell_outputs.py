@@ -12,7 +12,7 @@ def test_merge_cell_outputs():
     expected_path = path.join(MERGE_OUTPUTS_DIR, out_name)
     with TemporaryDirectory() as tmpdir:
         actual_path = path.join(tmpdir, out_name)
-        merge_outputs_cmd.callback((nb_path, actual_path))
+        merge_outputs_cmd.callback(nb_path, actual_path)
         with open(expected_path, 'r') as f:
             expected_nb = json.load(f)
         with open(actual_path, 'r') as f:
