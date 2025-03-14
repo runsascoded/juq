@@ -6,8 +6,8 @@ from functools import wraps
 from inspect import getfullargspec
 from sys import stdin, stdout
 
-from click import argument, group, option, UsageError
-from utz import recvs
+from click import argument, group, option
+from utz import recvs, call
 
 
 @group()
@@ -29,8 +29,6 @@ def with_nb_input(func):
         if 'out_path' in kwargs and kwargs['out_path']:
             if out_path != kwargs['out_path']:
                 raise ValueError(f"Specify -o/--out-path xor a 2nd positional arg: {out_path} != {kwargs['out_path']}")
-        elif recvs(func, 'out_path'):
-            kwargs['out_path'] = out_path
 
         ctx = nullcontext(stdin) if nb_path == '-' or nb_path is None else open(nb_path, 'r')
         with ctx as f:
@@ -53,15 +51,15 @@ def with_nb_input(func):
             if trailing_newline is None:
                 trailing_newline = nb_str.endswith('\n')
             nb = json.loads(nb_str)
-        if recvs(func, 'nb'):
-            kwargs['nb'] = nb
-        if recvs(func, 'nb_path') or 'nb_path' in spec.kwonlyargs:
-            kwargs['nb_path'] = nb_path
-        if recvs(func, 'indent'):
-            kwargs['indent'] = indent
-        if recvs(func, 'trailing_newline'):
-            kwargs['trailing_newline'] = trailing_newline
-        return func(**kwargs)
+        return call(
+            func,
+            **kwargs,
+            nb_path=nb_path,
+            out_path=out_path,
+            nb=nb,
+            indent=indent,
+            trailing_newline=trailing_newline,
+        )
     return wrapper
 
 
@@ -93,12 +91,7 @@ def with_nb(func):
             kwargs['out_path'] = out_path
 
         kwargs['nb_path'] = nb_path
-        kwargs = {
-            k: v
-            for k, v in kwargs.items()
-            if recvs(func, k)
-        }
-        rv = func(*args, **kwargs)
+        rv = call(func, *args, **kwargs)
         if isinstance(rv, tuple):
             nb, exc = rv
         elif isinstance(rv, dict):
