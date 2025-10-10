@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import json
+import sys
 from os.path import join, basename
 from tempfile import TemporaryDirectory
+
+from pytest import mark
 
 from juq.papermill.run import papermill_run_cmd
 from tests.test_papermill_clean import TEST_DIR
@@ -28,10 +31,12 @@ def check(
     assert actual == expected
 
 
+@mark.xfail(sys.version_info[:3] != (3, 11, 13), reason="Test fixtures are Python 3.11.13-specific")
 def test_mixed_tags():
     check("mixed-tags.ipynb")
 
 
+@mark.xfail(sys.version_info[:3] != (3, 11, 13), reason="Test fixtures are Python 3.11.13-specific")
 def test_mixed_tags_params():
     check(
         "mixed-tags-params.ipynb",
@@ -40,6 +45,7 @@ def test_mixed_tags_params():
     )
 
 
+@mark.xfail(sys.version_info[:3] != (3, 11, 13), reason="Test fixtures are Python 3.11.13-specific")
 def test_run_previously_run_nb():
     check(
         "mixed-tags-params-222.ipynb",
@@ -48,6 +54,7 @@ def test_run_previously_run_nb():
     )
 
 
+@mark.xfail(sys.version_info[:3] != (3, 11, 13), reason="Test fixtures are Python 3.11.13-specific")
 def test_mixed_tags_keep():
     check(
         "mixed-tags.ipynb",
@@ -56,6 +63,7 @@ def test_mixed_tags_keep():
     )
 
 
+@mark.xfail(sys.version_info[:3] != (3, 11, 13), reason="Test fixtures are Python 3.11.13-specific")
 def test_mixed_tags_drop():
     check(
         "mixed-tags.ipynb",
