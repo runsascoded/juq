@@ -1,10 +1,11 @@
 import json
+import sys
 from os.path import join
 from subprocess import check_call, CalledProcessError
 from tempfile import TemporaryDirectory
 
 from papermill import execute_notebook, PapermillExecutionError
-from pytest import raises
+from pytest import mark, raises
 from utz import env
 
 from juq.papermill.clean import papermill_clean_cmd
@@ -12,6 +13,7 @@ from juq.papermill.run import papermill_run_cmd
 from tests.utils import MERGE_OUTPUTS_DIR, TEST_DIR
 
 
+@mark.xfail(sys.version_info[:3] != (3, 11, 13), reason="Test fixtures are Python 3.11.13-specific")
 def test_papermill_clean():
     nb_path = join(MERGE_OUTPUTS_DIR, "merged-outputs.ipynb")
     with TemporaryDirectory() as tmpdir:
@@ -32,6 +34,7 @@ def test_papermill_clean():
     assert cleaned_nb == split_outputs_nb
 
 
+@mark.xfail(sys.version_info[:3] != (3, 11, 13), reason="Test fixtures are Python 3.11.13-specific")
 def test_papermill_error():
     nb_path = join(TEST_DIR, "test-err.ipynb")
     with TemporaryDirectory() as tmpdir, env(NO_COLOR="1"):
