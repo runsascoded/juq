@@ -11,6 +11,6 @@ def papermill():
 
 
 nb_opts = decos(
-    option('-I', '--keep-ids', is_flag=True, help='Keep cell ids; by default they are removed.'),
+    option('-I/-D', '--keep-ids/--drop-ids', 'keep_ids', default=True, help='Keep or drop cell ids (default: keep).'),
     option('-k/-K', '--keep-tags/--no-keep-tags', default=None, help='When a cell\'s `tags` array is empty, enforce its presence or absence in the output.'),
 )

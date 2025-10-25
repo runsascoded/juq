@@ -79,7 +79,7 @@ def harmonize_empty_tags(cells0, cells1, exc):
 
 def papermill_run(
     nb_path,
-    keep_ids: bool = False,
+    keep_ids: bool = True,
     keep_tags: bool | None = None,
     parameter_strs: Tuple[str, ...] = (),
     request_save_on_cell_execute: bool | None = None,

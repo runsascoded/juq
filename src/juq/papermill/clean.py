@@ -8,7 +8,7 @@ from juq.papermill import papermill, nb_opts
 
 def papermill_clean_cell(
     cell,
-    keep_ids: bool = False,
+    keep_ids: bool = True,
     keep_tags: bool | None = False,
 ):
     if not keep_ids and 'id' in cell:
@@ -29,7 +29,7 @@ def papermill_clean_cell(
 
 def papermill_clean(
     nb,
-    keep_ids: bool = False,
+    keep_ids: bool = True,
     keep_tags: bool | None = False,
 ):
     """Remove Papermill metadata from a notebook.
