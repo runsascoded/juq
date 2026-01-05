@@ -4,6 +4,7 @@ import json
 from contextlib import nullcontext
 from functools import wraps
 from inspect import getfullargspec
+from os.path import exists
 from sys import stdin, stdout
 
 from click import argument, group, option
@@ -13,6 +14,60 @@ from utz import recvs, call
 @group()
 def cli():
     pass
+
+
+def infer_nb_indent(nb_str: str) -> int | None:
+    """Infer indentation level from notebook JSON string."""
+    if nb_str.startswith('{'):
+        if len(nb_str) > 1 and nb_str[1] == "\n":
+            idx = 2
+            indent = 0
+            while idx < len(nb_str) and nb_str[idx] == ' ':
+                idx += 1
+                indent += 1
+            return indent
+        else:
+            return None
+    else:
+        raise ValueError(f"Cannot infer `indent` from non-JSON input beginning with {nb_str[:30]}")
+
+
+def infer_nb_trailing_newline(nb_str: str) -> bool:
+    """Infer whether notebook string has trailing newline."""
+    return nb_str.endswith('\n')
+
+
+def write_nb(
+    nb: dict,
+    path: str,
+    indent: int | None = None,
+    ensure_ascii: bool = False,
+    trailing_newline: bool | None = None,
+):
+    """Write a notebook dict to a file.
+
+    If indent is None and the file exists, infer indent from existing file.
+    If trailing_newline is None and the file exists, infer from existing file.
+    """
+    if (indent is None or trailing_newline is None) and exists(path):
+        with open(path) as f:
+            existing = f.read()
+        if indent is None:
+            indent = infer_nb_indent(existing)
+            if indent is None:
+                indent = 1
+        if trailing_newline is None:
+            trailing_newline = infer_nb_trailing_newline(existing)
+    else:
+        if indent is None:
+            indent = 1
+        if trailing_newline is None:
+            trailing_newline = True
+
+    with open(path, 'w') as f:
+        json.dump(nb, f, indent=indent, ensure_ascii=ensure_ascii)
+        if trailing_newline:
+            f.write('\n')
 
 
 def with_nb_input(func):
@@ -35,21 +90,11 @@ def with_nb_input(func):
             nb_str = f.read()
             indent = kwargs.pop('indent', None)
             if indent is None:
-                if nb_str.startswith('{'):
-                    if nb_str[1] == "\n":
-                        idx = 2
-                        indent = 0
-                        while nb_str[idx] == ' ':
-                            idx += 1
-                            indent += 1
-                    else:
-                        indent = None
-                else:
-                    raise ValueError(f"Cannot infer `indent` from non-JSON input beginning with {nb_str[:30]}")
+                indent = infer_nb_indent(nb_str)
 
             trailing_newline = kwargs.pop('trailing_newline', None)
             if trailing_newline is None:
-                trailing_newline = nb_str.endswith('\n')
+                trailing_newline = infer_nb_trailing_newline(nb_str)
             nb = json.loads(nb_str)
         return call(
             func,
@@ -100,11 +145,12 @@ def with_nb(func):
         else:
             raise ValueError(f"Unrecognized with_nb return value {type(rv)}: {str(rv)[:100]}")
 
-        out_ctx = nullcontext(stdout) if out_path == '-' or out_path is None else open(out_path, 'w')
-        with out_ctx as f:
-            json.dump(nb, f, indent=indent, ensure_ascii=ensure_ascii)
+        if out_path and out_path != '-':
+            write_nb(nb, out_path, indent=indent, ensure_ascii=ensure_ascii, trailing_newline=trailing_newline)
+        else:
+            json.dump(nb, stdout, indent=indent, ensure_ascii=ensure_ascii)
             if trailing_newline:
-                f.write('\n')
+                print()
 
         if exc:
             raise exc
