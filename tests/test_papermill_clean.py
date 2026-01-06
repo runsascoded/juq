@@ -1,19 +1,17 @@
 import json
-import sys
 from os.path import join
 from subprocess import check_call, CalledProcessError
 from tempfile import TemporaryDirectory
 
 from papermill import execute_notebook, PapermillExecutionError
-from pytest import mark, raises
+from pytest import raises
 from utz import env
 
 from juq.papermill.clean import papermill_clean_cmd
 from juq.papermill.run import papermill_run_cmd
-from tests.utils import MERGE_OUTPUTS_DIR, TEST_DIR
+from tests.utils import MERGE_OUTPUTS_DIR, TEST_DIR, normalize_nb
 
 
-@mark.xfail(sys.version_info[:3] != (3, 11, 13), reason="Test fixtures are Python 3.11.13-specific")
 def test_papermill_clean():
     nb_path = join(MERGE_OUTPUTS_DIR, "merged-outputs.ipynb")
     with TemporaryDirectory() as tmpdir:
@@ -27,14 +25,13 @@ def test_papermill_clean():
         cleaned_path = join(tmpdir, 'cleaned.ipynb')
         papermill_clean_cmd.callback(post_papermill_path, cleaned_path)
         with open(cleaned_path, 'r') as f:
-            cleaned_nb = json.load(f)
+            actual = json.load(f)
         split_outputs_nb_path = join(MERGE_OUTPUTS_DIR, "split-outputs.ipynb")
         with open(split_outputs_nb_path, 'r') as f:
-            split_outputs_nb = json.load(f)
-    assert cleaned_nb == split_outputs_nb
+            expected = json.load(f)
+    assert normalize_nb(actual) == normalize_nb(expected)
 
 
-@mark.xfail(sys.version_info[:3] != (3, 11, 13), reason="Test fixtures are Python 3.11.13-specific")
 def test_papermill_error():
     nb_path = join(TEST_DIR, "test-err.ipynb")
     with TemporaryDirectory() as tmpdir, env(NO_COLOR="1"):
@@ -49,17 +46,17 @@ def test_papermill_error():
                 autosave_cell_every=False,
             )
 
-        with open(join(TEST_DIR, "test-err-out.ipynb"), 'rt') as f:
-            expected = f.read()
+        with open(join(TEST_DIR, "test-err-out.ipynb"), 'r') as f:
+            expected = json.load(f)
 
-        with open(out_path1, 'rt') as f:
-            actual1 = f.read()
-        assert actual1 == expected
+        with open(out_path1, 'r') as f:
+            actual1 = json.load(f)
+        assert normalize_nb(actual1) == normalize_nb(expected)
 
         out_path2 = join(tmpdir, 'out2.ipynb')
         with raises(CalledProcessError):
-            check_call([ 'juq', 'papermill', 'run', '-n1', nb_path, out_path2 ])
+            check_call(['juq', 'papermill', 'run', '-D', '-n1', nb_path, out_path2])
 
-        with open(out_path2, 'rt') as f:
-            actual2 = f.read()
-        assert actual2 == expected
+        with open(out_path2, 'r') as f:
+            actual2 = json.load(f)
+        assert normalize_nb(actual2) == normalize_nb(expected)
