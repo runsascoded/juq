@@ -75,15 +75,17 @@ def with_nb_input(func):
 
     @wraps(func)
     @argument('nb_path', required=False)
-    @argument('out_path', required=False)
+    @argument('out_path_arg', required=False, metavar='[OUT_PATH]')
     def wrapper(
         nb_path: str | None = None,
-        out_path: str | None = None,
+        out_path_arg: str | None = None,
         **kwargs,
     ):
-        if 'out_path' in kwargs and kwargs['out_path']:
-            if out_path != kwargs['out_path']:
-                raise ValueError(f"Specify -o/--out-path xor a 2nd positional arg: {out_path} != {kwargs['out_path']}")
+        # Merge positional out_path_arg with -o/--out-path option
+        out_path_opt = kwargs.pop('out_path', None)
+        if out_path_arg and out_path_opt:
+            raise ValueError(f"Specify -o/--out-path xor a 2nd positional arg, not both: {out_path_arg} != {out_path_opt}")
+        out_path = out_path_arg or out_path_opt
 
         ctx = nullcontext(stdin) if nb_path == '-' or nb_path is None else open(nb_path, 'r')
         with ctx as f:
