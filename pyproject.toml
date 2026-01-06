@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "juq_py"
-version = "0.5.2"
+version = "0.6.0"
 description = "Query, run, and clean/normalize Jupyter notebooks"
 readme = "README.md"
 requires-python = ">=3.9"
