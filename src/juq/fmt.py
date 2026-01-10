@@ -5,7 +5,7 @@ from sys import stdout
 from click import option
 from utz import decos, call
 
-from juq.cli import with_nb, with_nb_input, write_nb, cli, nb
+from juq.cli import with_nb_input, write_nb, nb
 
 
 def filter_cell(cell, *, sources=True, outputs=True, metadata=True, execution_count=True, cell_id=True, attachments=True):
@@ -38,12 +38,9 @@ def fmt(
 ):
     """Reformat notebook JSON (adjust indent, trailing newline, filter fields).
 
-    Filter flags (for `juq nb <path> fmt`):
+    Filter flags:
       lowercase (-s, -o, -a, -b, -c, -i, -m) = keep ONLY this field
       uppercase (-S, -O, -A, -B, -C, -I, -M) = DROP this field
-
-    For `juq fmt`, some short flags conflict with output options (-o, -a, -i),
-    so use long forms (--outputs, --attachments) or -I/-D for IDs.
     """
     # Check for "only" mode: if exactly one field is explicitly True, keep only that
     explicit_true = [
@@ -95,20 +92,6 @@ def fmt(
         nb['metadata'] = {}
 
     return nb
-
-
-# Legacy: `juq fmt` (flat command, limited short flags due to conflicts)
-fmt_cmd = decos(
-    cli.command('fmt'),
-    option('--attachments/--no-attachments', 'attachments', default=None, help='Keep only/drop cell attachments'),
-    option('-b/-B', '--nb-metadata/--no-nb-metadata', default=None, help='Keep only/drop notebook metadata'),
-    option('-c/-C', '--execution-count/--no-execution-count', default=None, help='Keep only/drop execution counts'),
-    option('-I/-D', '--cell-id/--no-cell-id', default=None, help='Keep only/drop cell IDs'),
-    option('-m/-M', '--cell-metadata/--no-cell-metadata', default=None, help='Keep only/drop cell metadata'),
-    option('--outputs/--no-outputs', 'outputs', default=None, help='Keep only/drop cell outputs'),
-    option('-s/-S', '--sources/--no-sources', default=None, help='Keep only/drop cell sources'),
-    with_nb,
-)(fmt)
 
 
 def _with_nb_fmt(func):

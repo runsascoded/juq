@@ -3,7 +3,7 @@ from subprocess import check_output
 
 
 def run_fmt(*args):
-    output = check_output(['juq', 'fmt', *args])
+    output = check_output(['juq', 'nb', 'fmt', *args])
     return json.loads(output)
 
 
@@ -64,8 +64,8 @@ def test_fmt_multiple_excludes():
 
 
 def test_fmt_drop_outputs():
-    """--no-outputs drops outputs."""
-    nb = run_fmt('--no-outputs', 'tests/files/mixed-tags.ipynb')
+    """-O drops outputs."""
+    nb = run_fmt('-O', 'tests/files/mixed-tags.ipynb')
     cell = nb['cells'][0]
     assert 'source' in cell
     assert 'outputs' not in cell
@@ -73,8 +73,8 @@ def test_fmt_drop_outputs():
 
 
 def test_fmt_sources_and_outputs():
-    """-s --outputs keeps sources + outputs."""
-    nb = run_fmt('-s', '--outputs', 'tests/files/mixed-tags.ipynb')
+    """-s -o keeps sources + outputs."""
+    nb = run_fmt('-s', '-o', 'tests/files/mixed-tags.ipynb')
     cell = nb['cells'][0]
     assert 'source' in cell
     assert 'outputs' in cell
