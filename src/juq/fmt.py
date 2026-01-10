@@ -1,7 +1,11 @@
-from click import option
-from utz import decos
+import json
+from functools import wraps
+from sys import stdout
 
-from juq.cli import with_nb, cli
+from click import option
+from utz import decos, call
+
+from juq.cli import with_nb, with_nb_input, write_nb, cli, nb
 
 
 def filter_cell(cell, *, sources=True, outputs=True, metadata=True, execution_count=True, cell_id=True, attachments=True):
@@ -34,9 +38,12 @@ def fmt(
 ):
     """Reformat notebook JSON (adjust indent, trailing newline, filter fields).
 
-    Filter flags: lowercase (-s, -b, -c, -I, -m) = keep ONLY this field
-                  uppercase (-S, -B, -C, -D, -M) = DROP this field
-                  --outputs, --attachments = keep only; --no-outputs, --no-attachments = drop
+    Filter flags (for `juq nb <path> fmt`):
+      lowercase (-s, -o, -a, -b, -c, -i, -m) = keep ONLY this field
+      uppercase (-S, -O, -A, -B, -C, -I, -M) = DROP this field
+
+    For `juq fmt`, some short flags conflict with output options (-o, -a, -i),
+    so use long forms (--outputs, --attachments) or -I/-D for IDs.
     """
     # Check for "only" mode: if exactly one field is explicitly True, keep only that
     explicit_true = [
@@ -90,6 +97,7 @@ def fmt(
     return nb
 
 
+# Legacy: `juq fmt` (flat command, limited short flags due to conflicts)
 fmt_cmd = decos(
     cli.command('fmt'),
     option('--attachments/--no-attachments', 'attachments', default=None, help='Keep only/drop cell attachments'),
@@ -100,4 +108,63 @@ fmt_cmd = decos(
     option('--outputs/--no-outputs', 'outputs', default=None, help='Keep only/drop cell outputs'),
     option('-s/-S', '--sources/--no-sources', default=None, help='Keep only/drop cell sources'),
     with_nb,
+)(fmt)
+
+
+def _with_nb_fmt(func):
+    """Like with_nb but with -w for in-place, freeing -a, -i, -o for filter flags."""
+    @option('--ensure-ascii', is_flag=True, help='Octal-escape non-ASCII characters in JSON output')
+    @option('-w', '--in-place', is_flag=True, help='Modify [NB_PATH] in-place')
+    @option('-n', '--indent', type=int, help='Indentation level for output JSON (default: infer from input)')
+    @option('--out-path', help='Write to this file instead of stdout')
+    @option('-t/-T', '--trailing-newline/--no-trailing-newline', default=None, help='Trailing newline (default: match input)')
+    @with_nb_input
+    @wraps(func)
+    def wrapper(
+        nb_path: str,
+        *args,
+        out_path: str | None = None,
+        ensure_ascii: bool = False,
+        in_place: bool = False,
+        indent: int | None = None,
+        trailing_newline: bool | None = None,
+        **kwargs,
+    ):
+        if in_place:
+            if out_path:
+                raise ValueError("Cannot use `-w` with `--out-path`")
+            if not nb_path or nb_path == '-':
+                raise ValueError("Cannot use `-w` without explicit `nb_path`")
+            out_path = nb_path
+
+        kwargs['nb_path'] = nb_path
+        kwargs['out_path'] = out_path
+        rv = call(func, *args, **kwargs)
+        nb_out = rv[0] if isinstance(rv, tuple) else rv
+        exc = rv[1] if isinstance(rv, tuple) else None
+
+        if out_path and out_path != '-':
+            write_nb(nb_out, out_path, indent=indent, ensure_ascii=ensure_ascii, trailing_newline=trailing_newline)
+        else:
+            json.dump(nb_out, stdout, indent=indent, ensure_ascii=ensure_ascii)
+            if trailing_newline:
+                print()
+
+        if exc:
+            raise exc
+
+    return wrapper
+
+
+# `juq nb fmt`: all filter short flags available (-s, -o, -a, -i, -m, -c, -b)
+nb_fmt_cmd = decos(
+    nb.command('fmt'),
+    option('-a/-A', '--attachments/--no-attachments', default=None, help='Keep only/drop cell attachments'),
+    option('-b/-B', '--nb-metadata/--no-nb-metadata', default=None, help='Keep only/drop notebook metadata'),
+    option('-c/-C', '--execution-count/--no-execution-count', default=None, help='Keep only/drop execution counts'),
+    option('-i/-I', '--cell-id/--no-cell-id', default=None, help='Keep only/drop cell IDs'),
+    option('-m/-M', '--cell-metadata/--no-cell-metadata', default=None, help='Keep only/drop cell metadata'),
+    option('-o/-O', '--outputs/--no-outputs', default=None, help='Keep only/drop cell outputs'),
+    option('-s/-S', '--sources/--no-sources', default=None, help='Keep only/drop cell sources'),
+    _with_nb_fmt,
 )(fmt)

@@ -13,6 +13,7 @@ from utz import decos, env
 from juq.cli import with_nb
 from juq.merge_outputs import merge_outputs
 from juq.papermill import nb_opts, papermill
+from juq.cli import nb as nb_group
 from juq.papermill.clean import papermill_clean
 
 
@@ -125,11 +126,13 @@ def papermill_run(
     return nb, exc
 
 
-papermill_run_cmd = decos(
-    papermill.command('run'),
+_run_opts = [
     nb_opts,
     option('-p', '--parameter', 'parameter_strs', multiple=True, help='"<k>=<v>" variable to set, while executing the notebook'),
     option('-s', '--request-save-on-cell-execute', is_flag=True, default=None, help="Request save notebook after each cell execution"),
     option('-S', '--autosave-cell-every', type=int, help="How often in seconds to autosave the notebook during long cell executions (0 to disable)"),
     with_nb,
-)(papermill_run)
+]
+
+papermill_run_cmd = decos(papermill.command('run'), *_run_opts)(papermill_run)
+nb_run_cmd = decos(nb_group.command('run'), *_run_opts)(papermill_run)

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from utz import decos
 
-from juq.cli import with_nb
+from juq.cli import with_nb, nb as nb_group
 from juq.papermill import papermill, nb_opts
 
 
@@ -50,8 +50,7 @@ def papermill_clean(
     return nb
 
 
-papermill_clean_cmd = decos(
-    papermill.command('clean'),
-    nb_opts,
-    with_nb,
-)(papermill_clean)
+_clean_opts = [nb_opts, with_nb]
+
+papermill_clean_cmd = decos(papermill.command('clean'), *_clean_opts)(papermill_clean)
+nb_clean_cmd = decos(nb_group.command('clean'), *_clean_opts)(papermill_clean)

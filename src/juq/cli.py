@@ -7,7 +7,7 @@ from inspect import getfullargspec
 from os.path import exists
 from sys import stdin, stdout
 
-from click import argument, group, option
+from click import argument, group, option, pass_context
 from utz import recvs, call
 
 
@@ -158,3 +158,9 @@ def with_nb(func):
             raise exc
 
     return wrapper
+
+
+@cli.group()
+def nb():
+    """Notebook transformation commands (fmt, run, clean, etc.)."""
+    pass
